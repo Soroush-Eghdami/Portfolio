@@ -1,0 +1,12 @@
+node_modules
+dist
+venv
+__pycache__
+*.pyc
+.git
+.gitignore
+backend/db.sqlite3
+backend/media
+backend/staticfiles
+pgdata
+.env.local

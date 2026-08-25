@@ -1,0 +1,113 @@
+[
+  {
+    "model": "api.skill",
+    "pk": 1,
+    "fields": { "name": "Python", "level": "Advanced", "icon": "🐍", "order": 1 }
+  },
+  {
+    "model": "api.skill",
+    "pk": 2,
+    "fields": { "name": "Django / DRF", "level": "Advanced", "icon": "🌐", "order": 2 }
+  },
+  {
+    "model": "api.skill",
+    "pk": 3,
+    "fields": { "name": "REST APIs", "level": "Advanced", "icon": "🔗", "order": 3 }
+  },
+  {
+    "model": "api.skill",
+    "pk": 4,
+    "fields": { "name": "Docker", "level": "Intermediate", "icon": "🐳", "order": 4 }
+  },
+  {
+    "model": "api.skill",
+    "pk": 5,
+    "fields": { "name": "PostgreSQL", "level": "Intermediate", "icon": "🐘", "order": 5 }
+  },
+  {
+    "model": "api.skill",
+    "pk": 6,
+    "fields": { "name": "MongoDB", "level": "Intermediate", "icon": "🍃", "order": 6 }
+  },
+  {
+    "model": "api.skill",
+    "pk": 7,
+    "fields": { "name": "Redis", "level": "Beginner", "icon": "⚡", "order": 7 }
+  },
+  {
+    "model": "api.skill",
+    "pk": 8,
+    "fields": { "name": "C++", "level": "Intermediate", "icon": "➕", "order": 8 }
+  },
+  {
+    "model": "api.project",
+    "pk": 1,
+    "fields": {
+      "title": "R.A.G",
+      "description": "Local, private RAG app for law students — upload case files, ask questions and get answers with cited sources. CLI + web UI.",
+      "tags": ["Python", "RAG", "AI"],
+      "gradient": "from-violet-600 to-indigo-600",
+      "demo_url": "https://github.com/Soroush-Eghdami/R.A.G",
+      "code_url": "https://github.com/Soroush-Eghdami/R.A.G",
+      "featured": true,
+      "order": 1
+    }
+  },
+  {
+    "model": "api.project",
+    "pk": 2,
+    "fields": {
+      "title": "Tweeter_Demo",
+      "description": "Full-stack Twitter clone with Docker support and real-time features.",
+      "tags": ["TypeScript", "Docker", "Real-time"],
+      "gradient": "from-fuchsia-600 to-pink-600",
+      "demo_url": "https://github.com/Soroush-Eghdami/Tweeter_Demo",
+      "code_url": "https://github.com/Soroush-Eghdami/Tweeter_Demo",
+      "featured": true,
+      "order": 2
+    }
+  },
+  {
+    "model": "api.project",
+    "pk": 3,
+    "fields": {
+      "title": "Online-shop-CBV",
+      "description": "Full-featured Django e-commerce demo with clean CBV architecture, ready to deploy.",
+      "tags": ["Django", "CBV", "E-commerce"],
+      "gradient": "from-cyan-500 to-blue-600",
+      "demo_url": "https://github.com/Soroush-Eghdami/Online-shop-CBV",
+      "code_url": "https://github.com/Soroush-Eghdami/Online-shop-CBV",
+      "featured": true,
+      "order": 3
+    }
+  },
+  {
+    "model": "api.project",
+    "pk": 4,
+    "fields": {
+      "title": "Summerizer",
+      "description": "Flask web app that summarizes text, PDF documents and audio files using transformer models and the Groq API.",
+      "tags": ["Flask", "Transformers", "Groq"],
+      "gradient": "from-emerald-500 to-teal-600",
+      "demo_url": "https://github.com/Soroush-Eghdami/Summerizer",
+      "code_url": "https://github.com/Soroush-Eghdami/Summerizer",
+      "featured": true,
+      "order": 4
+    }
+  },
+  {
+    "model": "api.profile",
+    "pk": 1,
+    "fields": {
+      "name": "Soroush Eghdami",
+      "role": "Python Backend Developer",
+      "bio": "Python Backend Developer | Django, REST APIs, Docker | Building AI-powered RAG systems & web apps. Computer Engineering student.",
+      "location": "404: Not Found",
+      "email": "Soroush.egh@gmail.com",
+      "phone": "",
+      "github": "https://github.com/Soroush-Eghdami",
+      "linkedin": "",
+      "twitter": "https://x.com/Hoodi_guy"
+    }
+  }
+]
