@@ -29,12 +29,19 @@ services:
     ports:
       - "8000:8000"
     volumes:
+      # bind mount for dev hot-reload — remove in production (see README)
       - ./backend:/app
       - backend_static:/app/staticfiles
       - backend_media:/app/media
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/health/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   frontend:
     build:
@@ -46,7 +53,8 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
 volumes:
   pgdata:

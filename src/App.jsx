@@ -87,6 +87,7 @@ export default function App() {
   const [profile, setProfile] = useState(null)
   const [apiStatus, setApiStatus] = useState('checking')
   const [sending, setSending] = useState(false)
+  const [formErrors, setFormErrors] = useState({})
   const [theme, setTheme] = useState(() => {
     if (typeof window === 'undefined') return 'dark'
     const saved = localStorage.getItem('theme')
@@ -105,6 +106,14 @@ export default function App() {
     const onScroll = () => setScrolled(window.scrollY > 20)
     window.addEventListener('scroll', onScroll)
     return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') setMenuOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
   }, [])
 
   useEffect(() => {
@@ -135,6 +144,24 @@ export default function App() {
 
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
 
+  const validate = (payload) => {
+    const errs = {}
+    const name = (payload.name || '').trim()
+    const email = (payload.email || '').trim()
+    const message = (payload.message || '').trim()
+    const subject = (payload.subject || '').trim()
+    const website = (payload.website || '').trim()
+    if (website) errs.website = 'Spam detected.'
+    if (name.length < 2) errs.name = 'Name must be at least 2 characters.'
+    else if (name.length > 100) errs.name = 'Name must be at most 100 characters.'
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.email = 'Enter a valid email address.'
+    if (subject && subject.length > 200) errs.subject = 'Subject must be at most 200 characters.'
+    if (message.length < 10) errs.message = 'Message must be at least 10 characters.'
+    else if (message.length > 5000) errs.message = 'Message must be at most 5000 characters.'
+    else if ((message.match(/https?:\/\//g) || []).length > 3) errs.message = 'Too many links.'
+    return errs
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     const fd = new FormData(e.target)
@@ -143,10 +170,20 @@ export default function App() {
       email: fd.get('email'),
       subject: fd.get('subject') || '',
       message: fd.get('message'),
+      website: fd.get('website') || '',
     }
+    const errs = validate(payload)
+    if (Object.keys(errs).length) {
+      setFormErrors(errs)
+      showToast(Object.values(errs)[0])
+      return
+    }
+    setFormErrors({})
+    // strip honeypot before sending
+    const { website: _hp, ...cleanPayload } = payload
     setSending(true)
     try {
-      await api.sendContact(payload)
+      await api.sendContact(cleanPayload)
       showToast('Message sent! I will reply soon ✨')
       e.target.reset()
     } catch (err) {
@@ -168,6 +205,9 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#fcfcfd] dark:bg-[#07070b] relative selection:bg-violet-500/30 text-zinc-900 dark:text-zinc-100 transition-colors duration-300">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[60] focus:px-4 focus:py-2 focus:rounded-full focus:bg-zinc-900 focus:text-white dark:focus:bg-white dark:focus:text-zinc-900">
+        Skip to content
+      </a>
       {/* background gradients */}
       <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
         <div className="absolute -top-[30%] -left-[10%] w-[70%] h-[70%] bg-violet-500/10 dark:bg-violet-600/20 rounded-full blur-[120px] transition-colors duration-300" />
@@ -178,7 +218,7 @@ export default function App() {
 
       {/* NAVBAR */}
       <header className={`fixed top-0 inset-x-0 z-50 transition-all ${scrolled ? 'py-3' : 'py-5'}`}>
-        <nav className={`mx-auto max-w-6xl px-4 flex items-center justify-between gap-4 ${scrolled ? 'bg-white/80 dark:bg-white/[0.06] backdrop-blur-xl border border-zinc-200 dark:border-white/10 rounded-full px-6 py-3 shadow-xl dark:shadow-2xl' : 'bg-transparent border border-transparent'} transition-colors duration-300`}>
+        <nav aria-label="Primary" className={`mx-auto max-w-6xl px-4 flex items-center justify-between gap-4 ${scrolled ? 'bg-white/80 dark:bg-white/[0.06] backdrop-blur-xl border border-zinc-200 dark:border-white/10 rounded-full px-6 py-3 shadow-xl dark:shadow-2xl' : 'bg-transparent border border-transparent'} transition-colors duration-300`}>
           <a href="#home" className="flex items-center gap-2.5 font-display font-bold text-lg tracking-tight text-zinc-900 dark:text-white">
             <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-cyan-500 grid place-items-center text-white text-sm">◆</span>
             {displayName}
@@ -217,13 +257,19 @@ export default function App() {
             >
               {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
             </button>
-            <button onClick={() => setMenuOpen(!menuOpen)} className="w-9 h-9 grid place-items-center rounded-full bg-white dark:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-white transition-colors">
-              <span className="text-lg">{menuOpen ? '✕' : '☰'}</span>
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              aria-expanded={menuOpen}
+              aria-controls="mobile-menu"
+              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              className="w-9 h-9 grid place-items-center rounded-full bg-white dark:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-white transition-colors"
+            >
+              <span aria-hidden="true" className="text-lg">{menuOpen ? '✕' : '☰'}</span>
             </button>
           </div>
         </nav>
         {menuOpen && (
-          <div className="md:hidden mx-4 mt-3 bg-white/95 dark:bg-zinc-900/90 backdrop-blur-xl border border-zinc-200 dark:border-white/10 rounded-2xl p-2 flex flex-col shadow-xl transition-colors">
+          <div id="mobile-menu" role="dialog" aria-modal="true" aria-label="Mobile navigation" className="md:hidden mx-4 mt-3 bg-white/95 dark:bg-zinc-900/90 backdrop-blur-xl border border-zinc-200 dark:border-white/10 rounded-2xl p-2 flex flex-col shadow-xl transition-colors">
             {NAV.map((n) => (
               <a key={n.id} href={`#${n.id}`} onClick={() => setMenuOpen(false)} className="px-4 py-3 text-sm text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 rounded-xl transition">{n.label}</a>
             ))}
@@ -232,7 +278,8 @@ export default function App() {
         )}
       </header>
 
-      {/* HERO */}
+      <main id="main-content">
+        {/* HERO */}
       <section id="home" className="pt-32 pb-10 px-4 max-w-6xl mx-auto">
         <div className="grid lg:grid-cols-12 gap-6">
           <div className="lg:col-span-8 bg-white dark:bg-transparent dark:bg-gradient-to-br dark:from-white/[0.08] dark:to-white/[0.02] backdrop-blur-xl border border-zinc-200 dark:border-white/10 rounded-[32px] p-8 md:p-10 relative overflow-hidden shadow-xl dark:shadow-none transition-colors duration-300">
@@ -393,18 +440,27 @@ export default function App() {
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
-            {skills.map((s) => (
-              <div key={s.id ?? s.name} className="group bg-white dark:bg-transparent dark:bg-gradient-to-br dark:from-white/[0.06] dark:to-white/[0.02] border border-zinc-200 dark:border-white/10 rounded-2xl p-5 hover:border-violet-300 dark:hover:border-violet-500/30 hover:bg-zinc-50 dark:hover:bg-white/[0.08] transition shadow-sm dark:shadow-none">
-                <div className="w-10 h-10 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 grid place-items-center font-bold text-sm group-hover:scale-105 transition">
-                  {s.icon || '◆'}
-                </div>
-                <h3 className="font-semibold mt-4 text-sm text-zinc-900 dark:text-white">{s.name}</h3>
-                <p className="text-xs text-zinc-500 mt-1">{s.level}</p>
-                <div className="mt-3 h-1.5 bg-zinc-200 dark:bg-white/10 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-violet-500 to-cyan-500 rounded-full" style={{ width: s.level === 'Advanced' ? '92%' : s.level === 'Beginner' ? '45%' : '78%' }} />
-                </div>
-              </div>
-            ))}
+            {apiStatus === 'checking'
+              ? Array.from({ length: 8 }).map((_, i) => (
+                  <div key={`skel-${i}`} className="animate-pulse bg-white dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 rounded-2xl p-5 h-[132px]">
+                    <div className="w-10 h-10 rounded-xl bg-zinc-200 dark:bg-white/10" />
+                    <div className="mt-4 h-4 w-2/3 bg-zinc-200 dark:bg-white/10 rounded" />
+                    <div className="mt-2 h-3 w-1/3 bg-zinc-100 dark:bg-white/5 rounded" />
+                    <div className="mt-3 h-1.5 bg-zinc-200 dark:bg-white/10 rounded-full" />
+                  </div>
+                ))
+              : skills.map((s) => (
+                  <div key={s.id ?? s.name} className="group bg-white dark:bg-transparent dark:bg-gradient-to-br dark:from-white/[0.06] dark:to-white/[0.02] border border-zinc-200 dark:border-white/10 rounded-2xl p-5 hover:border-violet-300 dark:hover:border-violet-500/30 hover:bg-zinc-50 dark:hover:bg-white/[0.08] transition shadow-sm dark:shadow-none">
+                    <div className="w-10 h-10 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 grid place-items-center font-bold text-sm group-hover:scale-105 transition">
+                      {s.icon || '◆'}
+                    </div>
+                    <h3 className="font-semibold mt-4 text-sm text-zinc-900 dark:text-white">{s.name}</h3>
+                    <p className="text-xs text-zinc-500 mt-1">{s.level}</p>
+                    <div className="mt-3 h-1.5 bg-zinc-200 dark:bg-white/10 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-violet-500 to-cyan-500 rounded-full" style={{ width: s.level === 'Advanced' ? '92%' : s.level === 'Beginner' ? '45%' : '78%' }} />
+                    </div>
+                  </div>
+                ))}
           </div>
         </div>
       </section>
@@ -420,31 +476,42 @@ export default function App() {
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">
-          {projects.map((p) => (
-            <article key={p.id ?? p.title} className="group bg-white dark:bg-white/[0.04] backdrop-blur border border-zinc-200 dark:border-white/10 rounded-[28px] overflow-hidden hover:border-zinc-300 dark:hover:border-white/20 transition flex flex-col shadow-sm dark:shadow-none">
-              <div className={`h-48 bg-gradient-to-br ${p.gradient} relative p-6 flex flex-col justify-between overflow-hidden`}>
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#fff1_1px,transparent_1px),linear-gradient(to_bottom,#fff1_1px,transparent_1px)] bg-[size:24px_24px] opacity-30" />
-                <div className="relative flex justify-between items-start">
-                  <span className="px-3 py-1 rounded-full bg-white/20 backdrop-blur text-xs font-medium border border-white/20 text-white">2024 • Case Study</span>
-                  <span className="w-8 h-8 rounded-full bg-white grid place-items-center text-zinc-900 group-hover:rotate-45 transition">↗</span>
+          {apiStatus === 'checking'
+            ? Array.from({ length: 3 }).map((_, i) => (
+                <div key={`pskel-${i}`} className="animate-pulse bg-white dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 rounded-[28px] overflow-hidden h-[420px]">
+                  <div className="h-48 bg-zinc-200 dark:bg-white/10" />
+                  <div className="p-6 space-y-3">
+                    <div className="h-5 w-2/3 bg-zinc-200 dark:bg-white/10 rounded" />
+                    <div className="h-4 w-full bg-zinc-100 dark:bg-white/5 rounded" />
+                    <div className="h-4 w-5/6 bg-zinc-100 dark:bg-white/5 rounded" />
+                  </div>
                 </div>
-                <div className="relative">
-                  <div className="w-full h-20 rounded-xl bg-white/15 backdrop-blur border border-white/20 grid place-items-center text-white/80 text-xs">▦ Preview Mockup</div>
-                </div>
-              </div>
-              <div className="p-6 flex-1 flex flex-col">
-                <h3 className="font-display font-semibold text-lg leading-tight text-zinc-900 dark:text-white">{p.title}</h3>
-                <p className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed mt-2 flex-1">{p.description}</p>
-                <div className="flex flex-wrap gap-2 mt-4">
-                  {(p.tags || []).map((t) => <span key={t} className="px-2.5 py-1 rounded-full bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-xs text-zinc-600 dark:text-zinc-400">{t}</span>)}
-                </div>
-                <div className="flex gap-3 mt-5">
-                  <a href={p.demo_url || '#'} onClick={(e) => { if (p.demo_url === '#') { e.preventDefault(); showToast('Live demo coming soon 🔗') }}} className="flex-1 text-center py-2.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-100 transition">Live Demo</a>
-                  <a href={p.code_url || '#'} onClick={(e) => { if (p.code_url === '#') { e.preventDefault(); showToast('Github repo private 🔒') }}} className="px-5 py-2.5 rounded-full bg-zinc-100 dark:bg-white/10 border border-zinc-200 dark:border-white/10 text-sm text-zinc-700 dark:text-white hover:bg-zinc-200 dark:hover:bg-white/15 transition">Code</a>
-                </div>
-              </div>
-            </article>
-          ))}
+              ))
+            : projects.map((p) => (
+                <article key={p.id ?? p.title} className="group bg-white dark:bg-white/[0.04] backdrop-blur border border-zinc-200 dark:border-white/10 rounded-[28px] overflow-hidden hover:border-zinc-300 dark:hover:border-white/20 transition flex flex-col shadow-sm dark:shadow-none">
+                  <div className={`h-48 bg-gradient-to-br ${p.gradient} relative p-6 flex flex-col justify-between overflow-hidden`}>
+                    <div className="absolute inset-0 bg-[linear-gradient(to_right,#fff1_1px,transparent_1px),linear-gradient(to_bottom,#fff1_1px,transparent_1px)] bg-[size:24px_24px] opacity-30" />
+                    <div className="relative flex justify-between items-start">
+                      <span className="px-3 py-1 rounded-full bg-white/20 backdrop-blur text-xs font-medium border border-white/20 text-white">2024 • Case Study</span>
+                      <span className="w-8 h-8 rounded-full bg-white grid place-items-center text-zinc-900 group-hover:rotate-45 transition">↗</span>
+                    </div>
+                    <div className="relative">
+                      <div className="w-full h-20 rounded-xl bg-white/15 backdrop-blur border border-white/20 grid place-items-center text-white/80 text-xs">▦ Preview Mockup</div>
+                    </div>
+                  </div>
+                  <div className="p-6 flex-1 flex flex-col">
+                    <h3 className="font-display font-semibold text-lg leading-tight text-zinc-900 dark:text-white">{p.title}</h3>
+                    <p className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed mt-2 flex-1">{p.description}</p>
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      {(p.tags || []).map((t) => <span key={t} className="px-2.5 py-1 rounded-full bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-xs text-zinc-600 dark:text-zinc-400">{t}</span>)}
+                    </div>
+                    <div className="flex gap-3 mt-5">
+                      <a href={p.demo_url || '#'} onClick={(e) => { if (p.demo_url === '#') { e.preventDefault(); showToast('Live demo coming soon 🔗') }}} className="flex-1 text-center py-2.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-100 transition">Live Demo</a>
+                      <a href={p.code_url || '#'} onClick={(e) => { if (p.code_url === '#') { e.preventDefault(); showToast('Github repo private 🔒') }}} className="px-5 py-2.5 rounded-full bg-zinc-100 dark:bg-white/10 border border-zinc-200 dark:border-white/10 text-sm text-zinc-700 dark:text-white hover:bg-zinc-200 dark:hover:bg-white/15 transition">Code</a>
+                    </div>
+                  </div>
+                </article>
+              ))}
         </div>
       </section>
 
@@ -481,24 +548,30 @@ export default function App() {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="lg:col-span-7 bg-white dark:bg-white/[0.04] backdrop-blur border border-zinc-200 dark:border-white/10 rounded-[28px] p-8 shadow-sm dark:shadow-none transition-colors duration-300">
+          <form onSubmit={handleSubmit} noValidate className="lg:col-span-7 bg-white dark:bg-white/[0.04] backdrop-blur border border-zinc-200 dark:border-white/10 rounded-[28px] p-8 shadow-sm dark:shadow-none transition-colors duration-300">
+            {/* honeypot */}
+            <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
             <div className="grid sm:grid-cols-2 gap-4">
-              <label className="space-y-2">
+              <label className="space-y-1.5">
                 <span className="text-xs tracking-widest text-zinc-500 font-semibold">FULL NAME</span>
-                <input name="name" required placeholder="John Doe" className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-white/[0.06] border border-zinc-200 dark:border-white/10 text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-zinc-900 dark:text-white focus:outline-none focus:border-violet-400 dark:focus:border-violet-500/50 focus:bg-white dark:focus:bg-white/[0.08] transition" />
+                <input name="name" required maxLength={100} placeholder="John Doe" aria-invalid={!!formErrors.name} aria-describedby={formErrors.name ? 'err-name' : undefined} className={`w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-white/[0.06] border text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-zinc-900 dark:text-white focus:outline-none focus:border-violet-400 dark:focus:border-violet-500/50 focus:bg-white dark:focus:bg-white/[0.08] transition ${formErrors.name ? 'border-red-400 dark:border-red-500' : 'border-zinc-200 dark:border-white/10'}`} />
+                {formErrors.name && <p id="err-name" className="text-xs text-red-600 dark:text-red-400">{formErrors.name}</p>}
               </label>
-              <label className="space-y-2">
+              <label className="space-y-1.5">
                 <span className="text-xs tracking-widest text-zinc-500 font-semibold">EMAIL ADDRESS</span>
-                <input name="email" required type="email" placeholder="john@example.com" className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-white/[0.06] border border-zinc-200 dark:border-white/10 text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-zinc-900 dark:text-white focus:outline-none focus:border-violet-400 dark:focus:border-violet-500/50 transition" />
+                <input name="email" required type="email" maxLength={254} placeholder="john@example.com" aria-invalid={!!formErrors.email} aria-describedby={formErrors.email ? 'err-email' : undefined} className={`w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-white/[0.06] border text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-zinc-900 dark:text-white focus:outline-none focus:border-violet-400 dark:focus:border-violet-500/50 transition ${formErrors.email ? 'border-red-400 dark:border-red-500' : 'border-zinc-200 dark:border-white/10'}`} />
+                {formErrors.email && <p id="err-email" className="text-xs text-red-600 dark:text-red-400">{formErrors.email}</p>}
               </label>
             </div>
-            <label className="space-y-2 block mt-4">
+            <label className="space-y-1.5 block mt-4">
               <span className="text-xs tracking-widest text-zinc-500 font-semibold">SUBJECT</span>
-              <input name="subject" placeholder="Project inquiry" className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-white/[0.06] border border-zinc-200 dark:border-white/10 text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-zinc-900 dark:text-white focus:outline-none focus:border-violet-400 dark:focus:border-violet-500/50 transition" />
+              <input name="subject" placeholder="Project inquiry" maxLength={200} aria-invalid={!!formErrors.subject} aria-describedby={formErrors.subject ? 'err-subject' : undefined} className={`w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-white/[0.06] border text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-zinc-900 dark:text-white focus:outline-none focus:border-violet-400 dark:focus:border-violet-500/50 transition ${formErrors.subject ? 'border-red-400 dark:border-red-500' : 'border-zinc-200 dark:border-white/10'}`} />
+              {formErrors.subject && <p id="err-subject" className="text-xs text-red-600 dark:text-red-400">{formErrors.subject}</p>}
             </label>
-            <label className="space-y-2 block mt-4">
+            <label className="space-y-1.5 block mt-4">
               <span className="text-xs tracking-widest text-zinc-500 font-semibold">MESSAGE</span>
-              <textarea name="message" required rows={4} placeholder="Tell me about your project..." className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-white/[0.06] border border-zinc-200 dark:border-white/10 text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-zinc-900 dark:text-white focus:outline-none focus:border-violet-400 dark:focus:border-violet-500/50 resize-none transition" />
+              <textarea name="message" required rows={4} maxLength={5000} placeholder="Tell me about your project..." aria-invalid={!!formErrors.message} aria-describedby={formErrors.message ? 'err-message' : undefined} className={`w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-white/[0.06] border text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-zinc-900 dark:text-white focus:outline-none focus:border-violet-400 dark:focus:border-violet-500/50 resize-none transition ${formErrors.message ? 'border-red-400 dark:border-red-500' : 'border-zinc-200 dark:border-white/10'}`} />
+              {formErrors.message && <p id="err-message" className="text-xs text-red-600 dark:text-red-400">{formErrors.message}</p>}
             </label>
             <button type="submit" disabled={sending} className="mt-6 w-full py-3.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold text-sm hover:bg-zinc-800 dark:hover:bg-zinc-100 transition inline-flex items-center justify-center gap-2 disabled:opacity-60">
               {sending ? 'Sending...' : 'Send Message'} <span className="w-6 h-6 rounded-full bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white grid place-items-center text-xs">→</span>
@@ -507,20 +580,21 @@ export default function App() {
           </form>
         </div>
       </section>
+      </main>
 
       <footer className="border-t border-zinc-200 dark:border-white/10 py-6 px-4 transition-colors">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3 text-sm text-zinc-500">
           <p>© 2026 {displayName}. Built with React + Tailwind + Vite + Django. Crafted with ♥ and ☕.</p>
           <div className="flex gap-6">
-            <a href="#" className="hover:text-zinc-900 dark:hover:text-white transition">Privacy</a>
-            <a href="#" className="hover:text-zinc-900 dark:hover:text-white transition">Terms</a>
-            <a href="#" className="hover:text-zinc-900 dark:hover:text-white transition">Sitemap</a>
+            <a href="#" onClick={(e) => { e.preventDefault(); showToast('Privacy — coming soon') }} className="hover:text-zinc-900 dark:hover:text-white transition">Privacy</a>
+            <a href="#" onClick={(e) => { e.preventDefault(); showToast('Terms — coming soon') }} className="hover:text-zinc-900 dark:hover:text-white transition">Terms</a>
+            <a href="/sitemap.xml" target="_blank" rel="noreferrer" className="hover:text-zinc-900 dark:hover:text-white transition">Sitemap</a>
           </div>
         </div>
       </footer>
 
       {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-zinc-900 dark:bg-zinc-900 border border-white/15 text-white text-sm px-5 py-3 rounded-full shadow-2xl backdrop-blur z-50">
+        <div role="status" aria-live="polite" aria-atomic="true" className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-zinc-900 dark:bg-zinc-900 border border-white/15 text-white text-sm px-5 py-3 rounded-full shadow-2xl backdrop-blur z-50">
           {toast}
         </div>
       )}

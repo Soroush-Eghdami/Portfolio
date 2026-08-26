@@ -7,3 +7,6 @@ staticfiles
 media
 venv
 .git
+.env
+.env.*
+!.env.example

@@ -14,6 +14,7 @@ dist-ssr
 
 # Python / Django
 venv/
+.venv/
 __pycache__/
 *.py[cod]
 *.sqlite3
@@ -22,7 +23,15 @@ backend/staticfiles/
 backend/media/
 *.egg-info/
 .env
+.env.local
 pgdata/
+htmlcov/
+.coverage
+.coverage.*
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
 
 # Editor directories and files
 .vscode/*
