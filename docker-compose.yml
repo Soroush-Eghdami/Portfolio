@@ -22,7 +22,8 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432

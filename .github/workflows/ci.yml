@@ -9,8 +9,8 @@ jobs:
   frontend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: npm
@@ -21,8 +21,8 @@ jobs:
   backend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -34,5 +34,12 @@ jobs:
   compose:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+      - name: Prepare env for compose config
+        run: |
+          if [ ! -f .env ]; then
+            if [ -f .env.example ]; then cp .env.example .env; else echo "DJANGO_SECRET_KEY=ci-test-not-for-prod-12345" > .env; fi
+          fi
+          cat .env | head -n 20
       - run: docker compose config
+      - run: docker compose config --quiet && echo "compose config ok"
