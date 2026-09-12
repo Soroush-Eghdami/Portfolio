@@ -379,7 +379,7 @@ export default function App() {
   const displayTelegram = '@inairplanemode'
   // Socials: backend profile first, then live GitHub profile, then defaults
   const xHandle = githubProfile?.twitter_username ? `@${githubProfile.twitter_username}` : null
-  const xUrl = profile?.twitter || (githubProfile?.twitter_username ? `https://x.com/${githubProfile.twitter_username}` : 'https://x.com/Hoodi_guy')
+  const xUrl = profile?.twitter || (githubProfile?.twitter_username ? `https://x.com/${githubProfile.twitter_username}` : 'https://x.com/Tha_Dead_Sheep')
   const blogUrl = githubProfile?.blog ? (/^https?:\/\//i.test(githubProfile.blog) ? githubProfile.blog : `https://${githubProfile.blog}`) : ''
   const blogHost = blogUrl ? blogUrl.replace(/^https?:\/\//i, '').split('/')[0] : ''
   const cvUrl = profile?.cv ? resolveMediaUrl(profile.cv) : ''
