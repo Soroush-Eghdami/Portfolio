@@ -1,9 +1,9 @@
 # Portfolio — React + Django + Docker
 
-Modern eye-catchy portfolio with **React + Vite + Tailwind** frontend and **Python/Django + DRF** backend, fully **Dockerized** with Postgres.
+Modern portfolio with **React + Vite + Tailwind** frontend and **Python/Django + DRF** backend, fully **Dockerized** with Postgres.
 
 Live stack:
-- **Frontend** (`/`): React 19, Vite 8, Tailwind 3 — glassmorphism bento grid, live API integration
+- **Frontend** (`/`): React 19, Vite 8, Tailwind 3 — dark `#0E100F` / cream `#FFFCE1` design (Hanken Grotesk), scroll-reveal + hover micro-interactions, live API integration with static fallbacks
 - **Backend** (`/backend`): Django 6.1, Django REST Framework, Postgres (Docker) / SQLite (local venv), CORS, Gunicorn
 - **Infra**: Docker multi-stage builds, `docker-compose.yml` (db + backend + frontend/nginx)
 
@@ -20,14 +20,14 @@ portfolio/
 ├─ backend/
 │  ├─ config/           # Django project (settings.py, urls.py)
 │  ├─ api/              # Django app
-│  │  ├─ models.py      # Skill, Project, Profile, ContactMessage
+│  │  ├─ models.py      # Skill, Project (emoji/cover/stack), Profile (cv), ContactMessage
 │  │  ├─ serializers.py
 │  │  ├─ views.py       # ViewSets + health/contact
 │  │  ├─ urls.py        # /api/skills/, /api/projects/, /api/profile/, /api/contact/, /api/health/
 │  │  └─ fixtures.json  # seed reference (actual seeding via entrypoint shell)
-│  ├─ requirements.txt  # Django deps
+│  ├─ requirements.txt  # Django deps (incl. Pillow for image uploads)
 │  ├─ Dockerfile        # python:3.11-slim + gunicorn
-│  └─ entrypoint.sh     # migrate + seed + collectstatic + gunicorn
+│  └─ entrypoint.sh     # migrate + seed/sync + collectstatic + gunicorn
 ├─ Dockerfile           # Frontend: node:20 build → nginx:alpine + /api proxy
 ├─ nginx.conf           # SPA fallback + /api → backend:8000
 ├─ docker-compose.yml   # db (postgres) + backend:8000 + frontend:80
@@ -51,7 +51,7 @@ python -m venv venv
 
 pip install --upgrade pip
 pip install -r backend/requirements.txt
-# or: pip install django djangorestframework django-cors-headers psycopg2-binary gunicorn python-dotenv django-filter
+# or: pip install django djangorestframework django-cors-headers psycopg2-binary gunicorn python-dotenv django-filter drf-spectacular Pillow
 ```
 
 ### 2) Run locally (without Docker) — SQLite fallback
@@ -71,7 +71,15 @@ npm run dev   # http://localhost:5173 → proxies /api to localhost:8000
 # curl http://localhost:8000/api/skills/
 ```
 
-Frontend automatically falls back to static data if API offline (see `src/App.jsx:45` and `src/api.js:1`).
+Frontend automatically falls back to static data if API offline (see `src/App.jsx` and `src/api.js`).
+
+### Content management (`/admin/`)
+
+- **Skills** — fully admin-managed; the frontend renders whatever `/api/skills/` returns. Skill bars map level → width: Beginner 20%, Intermediate 58%, Advanced 88%.
+- **Projects** — the 5 showcase projects (R.A.G, Tweeter_Demo, CakeShop, Online-shop-CBV, Summerizer) are synced from `backend/entrypoint.sh` on every boot (matched by title). Card **text is code-managed** and overwritten on redeploy; **`cover` photos are never touched** — upload them per-project in admin (emoji shows when no cover).
+- **CV** — upload a PDF/DOC/DOCX (≤10MB) on the Profile page in admin; the hero **Download CV** button downloads it, otherwise it shows "coming soon".
+- **Dates & socials** — project dates sync live from the GitHub API (repo `created_at`/`pushed_at`); the X handle, blog link, bio and location fall back to the GitHub profile (`api.github.com/users/Soroush-Eghdami`).
+- Stale-skill fix: if the DB ever shows wrong skills again, delete all Skill rows in admin and restart the backend — the seed repopulates the backend set.
 
 ### 3) Docker — full stack (Postgres + Django + Nginx)
 
@@ -117,9 +125,9 @@ then `docker compose up --build` — check logs for `Superuser admin created`.
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/health/` | health check |
-| GET | `/api/skills/` | list skills (paginated) |
-| GET | `/api/projects/` | list featured projects |
-| GET | `/api/profile/` | singleton profile |
+| GET | `/api/skills/` | list skills (paginated) — `{name, level, icon}` |
+| GET | `/api/projects/` | list featured projects — incl. `{stack, emoji, cover}` |
+| GET | `/api/profile/` | singleton profile — incl. `cv` file URL |
 | POST | `/api/contact/` | create contact message `{name,email,subject,message}` |
 
 Admin: `/admin/` — manage Skills/Projects/Profile/Messages.
@@ -128,9 +136,11 @@ Admin: `/admin/` — manage Skills/Projects/Profile/Messages.
 
 ## Frontend ↔ Backend Wiring
 
-- `vite.config.js:10` proxies `/api` → `http://localhost:8000` in dev
-- `src/api.js:1` uses `VITE_API_URL` (empty = relative, works with nginx proxy in Docker)
-- `src/App.jsx:36` fetches skills/projects/profile on mount, shows `API online/offline` badge, POSTs contact form to `/api/contact/`
+- `vite.config.js` proxies `/api` → `http://localhost:8000` in dev
+- `src/api.js` uses `VITE_API_URL` (empty = relative, works with nginx proxy in Docker)
+- `src/App.jsx` fetches skills/projects/profile on mount, shows `API online/offline` badge, POSTs contact form to `/api/contact/`
+- Project card gradients come from the DB at runtime, so `tailwind.config.js` **safelist**s all `from-`/`to-` stops the API can serve — picking a new gradient in admin needs no frontend change
+- Uploaded files (`cover`, `cv`) resolve against `VITE_API_URL`; Django serves `/media/` in all envs and nginx proxies it in Docker
 
 ---
 
@@ -147,16 +157,17 @@ docker compose build --no-cache
 Tested locally:
 - `python backend/manage.py migrate` — OK (SQLite fallback when `POSTGRES_HOST=db` outside Docker)
 - `curl /api/health/` — `{"status":"ok"}`
-- `curl /api/skills/` — 8 skills
-- `npm run build` — 216kB JS, 21kB CSS
+- `curl /api/skills/` — 8 backend skills
+- `curl /api/projects/` — 5 showcase projects
+- `npm run build` — ~229kB JS, ~39kB CSS (incl. gradient safelist)
 
 ---
 
 ## Production Notes
 
 - Set `DJANGO_DEBUG=False`, generate new `DJANGO_SECRET_KEY`, restrict `DJANGO_ALLOWED_HOSTS` and `CORS_ALLOWED_ORIGINS`
-- Remove bind mount `volumes: - ./backend:/app` in `docker-compose.yml:22` for pure image deploys
-- `backend/staticfiles` and `media` are Docker volumes; configure S3/Cloud storage for real prod
+- Remove bind mount `volumes: - ./backend:/app` in `docker-compose.yml` (backend service) for pure image deploys
+- `backend_static` and `backend_media` are Docker volumes (covers/CV persist); configure S3/Cloud storage for real prod
 - Frontend `VITE_API_URL` build arg: leave empty for relative `/api` (nginx proxy) or set to `https://api.yourdomain.com`
 
 ---
