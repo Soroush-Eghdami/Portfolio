@@ -5,8 +5,17 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        display: ['Space Grotesk', 'system-ui', 'sans-serif'],
+        sans: ['Hanken Grotesk', 'Inter', 'system-ui', 'sans-serif'],
+        display: ['Hanken Grotesk', 'Space Grotesk', 'system-ui', 'sans-serif'],
+      },
+      colors: {
+        ink: '#0E100F',
+        inksoft: '#1A1C1A',
+        cream: '#FFFCE1',
+        creamdim: '#D6D3C0',
+        accentv: '#8B7CFF',
+        accentc: '#5EEAD4',
+        accenty: '#FACC15',
       },
     },
   },

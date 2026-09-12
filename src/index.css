@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600;700;800;900&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -9,18 +9,24 @@ html { color-scheme: dark; }
 html.light { color-scheme: light; }
 html.dark { color-scheme: dark; }
 body {
-  font-family: 'Inter', sans-serif;
-  background: #fcfcfd;
-  color: #18181b;
+  font-family: 'Hanken Grotesk', 'Inter', sans-serif;
+  background: #0E100F;
+  color: #FFFCE1;
   overflow-x: hidden;
   transition: background-color 0.3s ease, color 0.3s ease;
+  -webkit-font-smoothing: antialiased;
 }
-html.dark body {
-  background: #07070b;
-  color: #e5e7eb;
+html.light body {
+  background: #FFFCE1;
+  color: #0E100F;
 }
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #f4f4f5; }
-html.dark ::-webkit-scrollbar-track { background: #0a0a0f; }
-::-webkit-scrollbar-thumb { background: #a1a1aa; border-radius: 999px; }
-html.dark ::-webkit-scrollbar-thumb { background: #3f3f46; }
+::selection { background: #8B7CFF; color: #FFFCE1; }
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #0E100F; }
+html.light ::-webkit-scrollbar-track { background: #EFEAD2; }
+::-webkit-scrollbar-thumb { background: #3a3d39; border-radius: 999px; }
+
+.font-display { font-family: 'Hanken Grotesk', sans-serif; letter-spacing: -0.03em; }
+.text-balance { text-wrap: balance; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none { scrollbar-width: none; }

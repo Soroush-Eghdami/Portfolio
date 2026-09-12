@@ -3,10 +3,9 @@ import { api } from './api'
 
 const NAV = [
   { id: 'home', label: 'Home' },
-  { id: 'about', label: 'About' },
-  { id: 'skills', label: 'Skills' },
   { id: 'projects', label: 'Projects' },
-  { id: 'contact', label: 'Contact' },
+  { id: 'about', label: 'About Me' },
+  { id: 'skills', label: 'My Toolkit' },
 ]
 
 const GITHUB = 'https://github.com/Soroush-Eghdami'
@@ -27,39 +26,102 @@ const FALLBACK_PROJECTS = [
   {
     id: 1,
     title: 'R.A.G',
+    repo: 'R.A.G',
+    emoji: '🧠',
     description: 'Local, private RAG app for law students — upload case files, ask questions and get answers with cited sources. CLI + web UI.',
     tags: ['Python', 'RAG', 'AI'],
+    stack: 'Python, RAG, Transformers',
+    created_at: '2025-10-23T11:00:06Z',
+    pushed_at: '2025-12-24T10:32:59Z',
     gradient: 'from-violet-600 to-indigo-600',
-    demo_url: `${GITHUB}/R.A.G`,
     code_url: `${GITHUB}/R.A.G`,
   },
   {
     id: 2,
     title: 'Tweeter_Demo',
+    repo: 'Tweeter_Demo',
+    emoji: '🐦',
     description: 'Full-stack Twitter clone with Docker support and real-time features.',
     tags: ['TypeScript', 'Docker', 'Real-time'],
+    stack: 'TypeScript, Docker, Real-time',
+    created_at: '2026-04-19T04:21:40Z',
+    pushed_at: '2026-09-11T17:15:55Z',
     gradient: 'from-fuchsia-600 to-pink-600',
-    demo_url: `${GITHUB}/Tweeter_Demo`,
     code_url: `${GITHUB}/Tweeter_Demo`,
   },
   {
     id: 3,
     title: 'Online-shop-CBV',
+    repo: 'Online-shop-CBV',
+    emoji: '🛒',
     description: 'Full-featured Django e-commerce demo with clean CBV architecture, ready to deploy.',
     tags: ['Django', 'CBV', 'E-commerce'],
-    gradient: 'from-cyan-500 to-blue-600',
-    demo_url: `${GITHUB}/Online-shop-CBV`,
+    stack: 'Django, CBV, PostgreSQL',
+    created_at: '2025-09-28T19:46:19Z',
+    pushed_at: '2025-09-28T19:57:00Z',
+    gradient: 'from-teal-500 to-emerald-600',
     code_url: `${GITHUB}/Online-shop-CBV`,
   },
   {
     id: 4,
     title: 'Summerizer',
+    repo: 'Summerizer',
+    emoji: '📝',
     description: 'Flask web app that summarizes text, PDF documents and audio files using transformer models and the Groq API.',
     tags: ['Flask', 'Transformers', 'Groq'],
-    gradient: 'from-emerald-500 to-teal-600',
-    demo_url: `${GITHUB}/Summerizer`,
+    stack: 'Flask, Transformers, Groq API',
+    created_at: '2025-10-15T17:43:27Z',
+    pushed_at: '2026-06-01T16:15:14Z',
+    gradient: 'from-amber-500 to-orange-600',
     code_url: `${GITHUB}/Summerizer`,
   },
+]
+
+function repoFromUrl(url) {
+  if (!url) return ''
+  const m = String(url).match(/github\.com\/[^/]+\/([^/?#]+)/i)
+  return m ? decodeURIComponent(m[1].replace(/\.git$/, '')) : ''
+}
+
+function formatMonthYear(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+}
+
+function projectKey(p) {
+  return p.repo || repoFromUrl(p.code_url) || p.title
+}
+
+const SERVICES = [
+  {
+    n: '01',
+    title: 'Backend APIs',
+    text: 'I take ideas from zero to one — shaping schemas, writing clean Django / DRF code, and shipping documented REST APIs. I sweat the latency as much as the feature, so every release moves a number that matters.',
+  },
+  {
+    n: '02',
+    title: 'Docker & Deployment',
+    text: 'Deployments are my unfair advantage as a backend dev. I containerize everything myself, so apps go from laptop to server in days, not sprints — with compose files and envs that just work.',
+  },
+  {
+    n: '03',
+    title: 'AI / RAG Systems',
+    text: 'I speak AI fluently because I build with it. I wire transformers, embeddings and RAG pipelines into real products — which means honest trade-offs and demos that are real working software.',
+  },
+  {
+    n: '04',
+    title: 'Data & Integrations',
+    text: 'I am an AI-native builder. With PostgreSQL, Redis and MongoDB I compress weeks of iteration into days — modelling data, caching hot paths, and shipping experiments fast with evidence, not opinions.',
+  },
+]
+
+const TOOLKIT = [
+  { group: 'Backend', items: ['Python', 'Django', 'DRF', 'Flask', 'REST APIs', 'C++'] },
+  { group: 'Data', items: ['PostgreSQL', 'MongoDB', 'Redis', 'SQL', 'Embeddings', 'RAG'] },
+  { group: 'DevOps', items: ['Docker', 'Git', 'Linux', 'Nginx', 'CI', 'Compose'] },
+  { group: 'AI', items: ['Transformers', 'Groq API', 'Prompt Engineering', 'Summarization', 'Rapid Iteration', 'AI Prototyping'] },
 ]
 
 function SunIcon() {
@@ -81,6 +143,7 @@ function MoonIcon() {
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [progress, setProgress] = useState(0)
   const [toast, setToast] = useState('')
   const [skills, setSkills] = useState(FALLBACK_SKILLS)
   const [projects, setProjects] = useState(FALLBACK_PROJECTS)
@@ -88,11 +151,19 @@ export default function App() {
   const [apiStatus, setApiStatus] = useState('checking')
   const [sending, setSending] = useState(false)
   const [formErrors, setFormErrors] = useState({})
+  const [githubDates, setGithubDates] = useState({})
+  const [covers, setCovers] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('project-covers-v1') || '{}')
+    } catch {
+      return {}
+    }
+  })
   const [theme, setTheme] = useState(() => {
     if (typeof window === 'undefined') return 'dark'
     const saved = localStorage.getItem('theme')
     if (saved === 'light' || saved === 'dark') return saved
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    return 'dark'
   })
 
   useEffect(() => {
@@ -103,8 +174,13 @@ export default function App() {
   }, [theme])
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20)
-    window.addEventListener('scroll', onScroll)
+    const onScroll = () => {
+      setScrolled(window.scrollY > 20)
+      const h = document.documentElement.scrollHeight - window.innerHeight
+      setProgress(h > 0 ? Math.min(1, window.scrollY / h) : 0)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    onScroll()
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
@@ -123,12 +199,20 @@ export default function App() {
         if (cancelled) return
         if (s.status === 'fulfilled' && Array.isArray(s.value) && s.value.length) setSkills(s.value)
         if (p.status === 'fulfilled' && Array.isArray(p.value) && p.value.length) {
-          setProjects(p.value.map((x) => ({
-            ...x,
-            description: x.description,
-            demo_url: x.demo_url,
-            code_url: x.code_url,
-          })))
+          setProjects(p.value.map((x, i) => {
+            const fb = FALLBACK_PROJECTS[i % FALLBACK_PROJECTS.length]
+            return {
+              ...fb,
+              ...x,
+              repo: x.repo || repoFromUrl(x.code_url) || fb.repo,
+              emoji: x.emoji || fb.emoji,
+              gradient: x.gradient || fb.gradient,
+              created_at: x.created_at || fb.created_at,
+              pushed_at: x.pushed_at || fb.pushed_at,
+              description: x.description,
+              code_url: x.code_url,
+            }
+          }))
         }
         if (pr.status === 'fulfilled' && pr.value?.name) setProfile(pr.value)
         setApiStatus(h.status === 'fulfilled' ? 'online' : 'offline')
@@ -137,12 +221,80 @@ export default function App() {
     return () => { cancelled = true }
   }, [])
 
+  // Sync project dates live from GitHub so cards always match the repo
+  useEffect(() => {
+    let cancelled = false
+    const repos = [...new Set(projects.map((p) => p.repo || repoFromUrl(p.code_url)).filter(Boolean))]
+    if (!repos.length) return
+    Promise.allSettled(
+      repos.map((repo) =>
+        fetch(`https://api.github.com/repos/Soroush-Eghdami/${encodeURIComponent(repo)}`, {
+          headers: { Accept: 'application/vnd.github+json' },
+        }).then((r) => {
+          if (!r.ok) throw new Error(`GitHub ${r.status}`)
+          return r.json()
+        })
+      )
+    ).then((results) => {
+      if (cancelled) return
+      const next = {}
+      results.forEach((res, i) => {
+        if (res.status === 'fulfilled' && res.value?.created_at) {
+          next[repos[i]] = { created_at: res.value.created_at, pushed_at: res.value.pushed_at }
+        }
+      })
+      if (Object.keys(next).length) setGithubDates(next)
+    })
+    return () => { cancelled = true }
+  }, [projects.length])
+
   const showToast = (msg) => {
     setToast(msg)
     setTimeout(() => setToast(''), 3000)
   }
 
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
+
+  const handleCoverUpload = (e, key) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      showToast('Please choose an image file 🖼️')
+      return
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      showToast('Image must be under 3MB 📦')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      const dataUrl = reader.result
+      setCovers((prev) => {
+        const next = { ...prev, [key]: dataUrl }
+        try {
+          localStorage.setItem('project-covers-v1', JSON.stringify(next))
+        } catch {
+          showToast('Image saved for this session only (storage full) 🖼️')
+        }
+        return next
+      })
+      showToast('Cover photo updated ✨')
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleCoverRemove = (key) => {
+    setCovers((prev) => {
+      const next = { ...prev }
+      delete next[key]
+      try {
+        localStorage.setItem('project-covers-v1', JSON.stringify(next))
+      } catch { /* ignore */ }
+      return next
+    })
+    showToast('Cover reset to emoji ↩️')
+  }
 
   const validate = (payload) => {
     const errs = {}
@@ -179,7 +331,6 @@ export default function App() {
       return
     }
     setFormErrors({})
-    // strip honeypot before sending
     const { website: _hp, ...cleanPayload } = payload
     setSending(true)
     try {
@@ -199,62 +350,53 @@ export default function App() {
   }
 
   const displayName = profile?.name || 'Soroush Eghdami'
+  const shortName = 'soroush'
   const displayRole = profile?.role || 'Python Backend Developer'
   const displayEmail = profile?.email || 'Soroush.egh@gmail.com'
   const displayTelegram = '@inairplanemode'
 
   return (
-    <div className="min-h-screen bg-[#fcfcfd] dark:bg-[#07070b] relative selection:bg-violet-500/30 text-zinc-900 dark:text-zinc-100 transition-colors duration-300">
-      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[60] focus:px-4 focus:py-2 focus:rounded-full focus:bg-zinc-900 focus:text-white dark:focus:bg-white dark:focus:text-zinc-900">
+    <div className="min-h-screen bg-[#FFFCE1] text-[#0E100F] dark:bg-[#0E100F] dark:text-[#FFFCE1] transition-colors duration-300 selection:bg-[#8B7CFF]/40">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[60] focus:px-4 focus:py-2 focus:rounded-full focus:bg-[#0E100F] focus:text-[#FFFCE1] dark:focus:bg-[#FFFCE1] dark:focus:text-[#0E100F]">
         Skip to content
       </a>
-      {/* background gradients */}
-      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[30%] -left-[10%] w-[70%] h-[70%] bg-violet-500/10 dark:bg-violet-600/20 rounded-full blur-[120px] transition-colors duration-300" />
-        <div className="absolute -bottom-[20%] -right-[10%] w-[60%] h-[60%] bg-cyan-500/10 dark:bg-cyan-600/15 rounded-full blur-[130px] transition-colors duration-300" />
-        <div className="absolute top-[40%] left-[50%] -translate-x-1/2 w-[50%] h-[40%] bg-fuchsia-500/5 dark:bg-fuchsia-600/10 rounded-full blur-[110px] transition-colors duration-300" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#00000008_1px,transparent_1px),linear-gradient(to_bottom,#00000008_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:48px_48px] transition-colors duration-300" />
-      </div>
 
-      {/* NAVBAR */}
+      {/* scroll progress — like reference gradient bar */}
+      <div aria-hidden="true" className="fixed top-0 left-0 right-0 z-[55] h-[3px] origin-left bg-gradient-to-r from-[#8B7CFF] via-[#5EEAD4] to-[#FACC15]" style={{ transform: `scaleX(${progress})` }} />
+
+      {/* NAVBAR — reference style */}
       <header className={`fixed top-0 inset-x-0 z-50 transition-all ${scrolled ? 'py-3' : 'py-5'}`}>
-        <nav aria-label="Primary" className={`mx-auto max-w-6xl px-4 flex items-center justify-between gap-4 ${scrolled ? 'bg-white/80 dark:bg-white/[0.06] backdrop-blur-xl border border-zinc-200 dark:border-white/10 rounded-full px-6 py-3 shadow-xl dark:shadow-2xl' : 'bg-transparent border border-transparent'} transition-colors duration-300`}>
-          <a href="#home" className="flex items-center gap-2.5 font-display font-bold text-lg tracking-tight text-zinc-900 dark:text-white">
-            <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-cyan-500 grid place-items-center text-white text-sm">◆</span>
-            {displayName}
-            <span className="hidden sm:inline text-zinc-400 dark:text-zinc-500 font-normal">— Portfolio</span>
+        <nav aria-label="Primary" className={`mx-auto max-w-6xl px-4 flex items-center justify-between gap-4 transition-colors duration-300 ${scrolled ? 'bg-[#FFFCE1]/85 dark:bg-[#0E100F]/85 backdrop-blur-xl border border-[#0E100F]/10 dark:border-white/10 rounded-full px-6 py-3 shadow-xl' : 'bg-transparent border border-transparent'}`}>
+          <a href="#home" className="font-display font-extrabold text-lg tracking-tight">
+            {shortName}
+            <span className="text-[#8B7CFF]">.</span>
           </a>
 
-          <div className="hidden md:flex items-center gap-1 bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/5 rounded-full p-1 transition-colors duration-300">
+          <div className="hidden md:flex items-center gap-6 text-sm font-medium">
             {NAV.map((n) => (
-              <a key={n.id} href={`#${n.id}`} className="px-4 py-1.5 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-full hover:bg-zinc-200 dark:hover:bg-white/10 transition">
+              <a key={n.id} href={`#${n.id}`} className="opacity-70 hover:opacity-100 transition">
                 {n.label}
               </a>
             ))}
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            <span className={`hidden lg:inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition-colors ${apiStatus === 'online' ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-300' : apiStatus === 'offline' ? 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-300' : 'bg-zinc-100 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400'}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${apiStatus === 'online' ? 'bg-emerald-500 dark:bg-emerald-400 animate-pulse' : 'bg-amber-500 dark:bg-amber-400'}`} />
+            <span className={`hidden lg:inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border ${apiStatus === 'online' ? 'border-emerald-500/30 text-emerald-600 dark:text-emerald-300' : apiStatus === 'offline' ? 'border-amber-500/30 text-amber-600 dark:text-amber-300' : 'border-[#0E100F]/10 dark:border-white/10 opacity-60'}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${apiStatus === 'online' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
               {apiStatus === 'online' ? 'API online' : apiStatus === 'offline' ? 'API offline' : 'checking...'}
             </span>
             <button
               onClick={toggleTheme}
               aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-              className="w-9 h-9 grid place-items-center rounded-full border bg-white dark:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-white/15 transition-colors"
+              className="w-9 h-9 grid place-items-center rounded-full border border-[#0E100F]/15 dark:border-white/15 hover:opacity-70 transition"
             >
               {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
             </button>
-            <a href="#contact" className="px-5 py-2 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-100 transition">Let's Talk →</a>
+            <a href="#contact" className="px-5 py-2 rounded-full bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] text-sm font-bold hover:opacity-85 transition">Contact Me</a>
           </div>
 
           <div className="flex items-center gap-2 md:hidden">
-            <button
-              onClick={toggleTheme}
-              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-              className="w-9 h-9 grid place-items-center rounded-full border bg-white dark:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
-            >
+            <button onClick={toggleTheme} aria-label="Toggle theme" className="w-9 h-9 grid place-items-center rounded-full border border-[#0E100F]/15 dark:border-white/15">
               {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
             </button>
             <button
@@ -262,150 +404,196 @@ export default function App() {
               aria-expanded={menuOpen}
               aria-controls="mobile-menu"
               aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-              className="w-9 h-9 grid place-items-center rounded-full bg-white dark:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-white transition-colors"
+              className="w-9 h-9 grid place-items-center rounded-full border border-[#0E100F]/15 dark:border-white/15"
             >
               <span aria-hidden="true" className="text-lg">{menuOpen ? '✕' : '☰'}</span>
             </button>
           </div>
         </nav>
         {menuOpen && (
-          <div id="mobile-menu" role="dialog" aria-modal="true" aria-label="Mobile navigation" className="md:hidden mx-4 mt-3 bg-white/95 dark:bg-zinc-900/90 backdrop-blur-xl border border-zinc-200 dark:border-white/10 rounded-2xl p-2 flex flex-col shadow-xl transition-colors">
+          <div id="mobile-menu" role="dialog" aria-modal="true" aria-label="Mobile navigation" className="md:hidden mx-4 mt-3 bg-[#FFFCE1] dark:bg-[#1A1C1A] border border-[#0E100F]/10 dark:border-white/10 rounded-2xl p-2 flex flex-col shadow-xl">
             {NAV.map((n) => (
-              <a key={n.id} href={`#${n.id}`} onClick={() => setMenuOpen(false)} className="px-4 py-3 text-sm text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 rounded-xl transition">{n.label}</a>
+              <a key={n.id} href={`#${n.id}`} onClick={() => setMenuOpen(false)} className="px-4 py-3 text-sm hover:opacity-70 transition">{n.label}</a>
             ))}
-            <a href="#contact" onClick={() => setMenuOpen(false)} className="mt-2 text-center py-3 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold">Let's Talk</a>
+            <a href="#contact" onClick={() => setMenuOpen(false)} className="mt-2 text-center py-3 rounded-xl bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] font-bold">Contact Me</a>
           </div>
         )}
       </header>
 
       <main id="main-content">
-        {/* HERO */}
-      <section id="home" className="pt-32 pb-10 px-4 max-w-6xl mx-auto">
-        <div className="grid lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-8 bg-white dark:bg-transparent dark:bg-gradient-to-br dark:from-white/[0.08] dark:to-white/[0.02] backdrop-blur-xl border border-zinc-200 dark:border-white/10 rounded-[32px] p-8 md:p-10 relative overflow-hidden shadow-xl dark:shadow-none transition-colors duration-300">
-            <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-violet-600/10 dark:from-violet-600/20 to-transparent rounded-full blur-2xl pointer-events-none" />
-            <div className="inline-flex items-center gap-2 text-xs tracking-widest font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-full px-3 py-1.5 transition-colors">
-              <span className="w-2 h-2 bg-emerald-500 dark:bg-emerald-400 rounded-full animate-pulse" /> AVAILABLE FOR NEW PROJECTS
+        {/* HERO — reference: Hello! + huge headline + image */}
+        <section id="home" className="pt-32 pb-10 px-4 max-w-6xl mx-auto">
+          <div className="grid lg:grid-cols-12 gap-8 items-center">
+            <div className="lg:col-span-7">
+              <h1 className="font-display font-bold text-2xl md:text-3xl tracking-tight">
+                Hello! I&apos;m {displayName} <span aria-hidden="true">👋</span>
+              </h1>
+              <div className="flex flex-wrap gap-2 mt-4">
+                <span className="px-4 py-1.5 rounded-full border border-[#0E100F]/15 dark:border-white/15 text-sm font-semibold">{displayRole}</span>
+                <span className="px-4 py-1.5 rounded-full bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] text-sm font-semibold">AI Builder</span>
+              </div>
+
+              <h2 className="font-display font-extrabold text-4xl md:text-6xl leading-[1.02] tracking-tight mt-6 text-balance">
+                I&apos;m a Backend Developer with technical &amp; AI expertise — a zero-to-one builder who takes ideas from whiteboard to shipped product.
+              </h2>
+              <p className="opacity-70 text-base md:text-lg leading-relaxed mt-5 max-w-xl">
+                {profile?.bio || 'Most backends just work. Mine don\'t break. I research the problem, design the schema in Django, containerize with Docker, and ship with the team — iterating faster than the roadmap says is possible.'}
+              </p>
+
+              <div className="flex flex-wrap gap-3 mt-8">
+                <a href="#projects" className="px-7 py-3.5 rounded-full bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] font-bold text-sm inline-flex items-center gap-2 hover:opacity-85 transition">
+                  View Projects <span aria-hidden="true">↗</span>
+                </a>
+                <a href="#contact" className="px-7 py-3.5 rounded-full border border-[#0E100F]/20 dark:border-white/20 font-semibold text-sm hover:opacity-70 transition">
+                  Say Hello !
+                </a>
+              </div>
+
+              <div className="flex items-center gap-6 mt-8 pt-6 border-t border-[#0E100F]/10 dark:border-white/10">
+                <div className="flex -space-x-2">
+                  <img src={AVATAR} alt={displayName} className="w-9 h-9 rounded-full border-2 border-[#FFFCE1] dark:border-[#0E100F] object-cover" />
+                  <span className="w-9 h-9 rounded-full bg-[#8B7CFF] border-2 border-[#FFFCE1] dark:border-[#0E100F] grid place-items-center text-xs font-bold text-white">111</span>
+                </div>
+                <div className="text-sm">
+                  <p className="font-medium">Growing on GitHub</p>
+                  <a href={GITHUB} target="_blank" rel="noreferrer" className="text-xs opacity-60 hover:opacity-100 transition">github.com/Soroush-Eghdami ↗</a>
+                </div>
+                <div className="hidden sm:flex ml-auto gap-8">
+                  <div><p className="font-display font-extrabold text-2xl">19+</p><p className="text-xs uppercase tracking-widest opacity-60">Repos</p></div>
+                  <div><p className="font-display font-extrabold text-2xl">10+</p><p className="text-xs uppercase tracking-widest opacity-60">Tools</p></div>
+                </div>
+              </div>
             </div>
 
-            <h1 className="font-display font-bold text-4xl md:text-6xl leading-[0.95] tracking-tight mt-6 text-zinc-900 dark:text-white">
-              Python <br />
-              <span className="bg-gradient-to-r from-violet-600 via-fuchsia-600 to-cyan-600 dark:from-violet-400 dark:via-fuchsia-400 dark:to-cyan-400 bg-clip-text text-transparent">Backend Developer</span> <br />
-              & AI Builder<span className="text-violet-600 dark:text-violet-400">.</span>
-            </h1>
-            <p className="text-zinc-600 dark:text-zinc-400 text-base md:text-lg leading-relaxed mt-4 max-w-xl">
-              {profile?.bio || 'I build fast, reliable backends with Python, Django and Docker — currently exploring AI-powered RAG systems and shipping real-world web apps.'}
-            </p>
-
-            <div className="flex flex-wrap gap-3 mt-8">
-              <a href="#projects" className="px-7 py-3.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold text-sm inline-flex items-center gap-2 hover:bg-zinc-800 dark:hover:bg-zinc-100 transition">
-                View Projects <span className="w-6 h-6 rounded-full bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white grid place-items-center text-xs">↗</span>
-              </a>
-              <a href="#" onClick={(e) => { e.preventDefault(); showToast('Resume download started 📄') }} className="px-7 py-3.5 rounded-full bg-zinc-100 dark:bg-white/10 border border-zinc-200 dark:border-white/15 text-zinc-900 dark:text-white font-medium text-sm backdrop-blur hover:bg-zinc-200 dark:hover:bg-white/15 transition">
-                Download CV
-              </a>
-            </div>
-
-            <div className="flex items-center gap-6 mt-8 pt-8 border-t border-zinc-200 dark:border-white/10 transition-colors">
-              <div className="flex -space-x-2">
-                <img src={AVATAR} alt="Soroush Eghdami" className="w-9 h-9 rounded-full border-2 border-white dark:border-zinc-900 object-cover" />
-                <span className="w-9 h-9 rounded-full bg-violet-600 border-2 border-white dark:border-zinc-900 grid place-items-center text-xs font-bold text-white">111</span>
-              </div>
-              <div className="text-sm">
-                <p className="text-zinc-700 dark:text-zinc-300 font-medium">Growing community on GitHub</p>
-                <a href={GITHUB} target="_blank" rel="noreferrer" className="text-xs text-zinc-500 hover:text-violet-600 dark:hover:text-violet-400 transition">github.com/Soroush-Eghdami ↗</a>
-              </div>
-              <div className="hidden sm:flex ml-auto gap-8">
-                <div><p className="font-display font-bold text-2xl text-zinc-900 dark:text-white">19+</p><p className="text-xs text-zinc-500 uppercase tracking-widest">Repos</p></div>
-                <div><p className="font-display font-bold text-2xl text-zinc-900 dark:text-white">10+</p><p className="text-xs text-zinc-500 uppercase tracking-widest">Technologies</p></div>
-              </div>
-            </div>
-          </div>
-
-          <div className="lg:col-span-4 grid gap-6">
-            <div className="bg-white dark:bg-white/[0.06] backdrop-blur-xl border border-zinc-200 dark:border-white/10 rounded-[28px] p-6 relative overflow-hidden shadow-lg dark:shadow-none transition-colors duration-300">
-              <div className="flex items-center gap-4">
-                <img src={AVATAR} alt="Soroush Eghdami" className="w-16 h-16 rounded-2xl object-cover" />
-                <div>
-                  <h3 className="font-semibold leading-none text-zinc-900 dark:text-white">{displayName}</h3>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{displayRole}</p>
-                  <div className="flex gap-2 mt-2">
-                    <a href={profile?.github || GITHUB} target="_blank" rel="noreferrer" title="GitHub" className="w-7 h-7 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 grid place-items-center text-xs font-bold">G</a>
-                    <a href={profile?.twitter || 'https://x.com/Hoodi_guy'} target="_blank" rel="noreferrer" title="X / Twitter" className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-white/10 border border-zinc-200 dark:border-white/10 grid place-items-center text-xs text-zinc-700 dark:text-white">𝕏</a>
-                    <a href="https://t.me/inairplanemode" target="_blank" rel="noreferrer" title="Telegram" className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-white/10 border border-zinc-200 dark:border-white/10 grid place-items-center text-xs text-zinc-700 dark:text-white">✈</a>
+            <div className="lg:col-span-5">
+              <div className="rounded-[28px] overflow-hidden border border-[#0E100F]/10 dark:border-white/10 bg-[#0E100F] dark:bg-[#1A1C1A]">
+                <img src={AVATAR} alt={`${displayName} — ${displayRole}`} className="w-full aspect-square object-cover" />
+                <div className="p-5 flex items-center justify-between">
+                  <div>
+                    <p className="font-display font-bold text-[#FFFCE1]">{displayName}</p>
+                    <p className="text-xs text-[#FFFCE1]/60">{displayRole} · AI / Django / Docker</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <a href={profile?.github || GITHUB} target="_blank" rel="noreferrer" title="GitHub" className="w-8 h-8 rounded-full bg-[#FFFCE1] text-[#0E100F] grid place-items-center text-xs font-bold">G</a>
+                    <a href={profile?.twitter || 'https://x.com/Hoodi_guy'} target="_blank" rel="noreferrer" title="X" className="w-8 h-8 rounded-full border border-white/20 grid place-items-center text-xs text-[#FFFCE1]">𝕏</a>
+                    <a href="https://t.me/inairplanemode" target="_blank" rel="noreferrer" title="Telegram" className="w-8 h-8 rounded-full border border-white/20 grid place-items-center text-xs text-[#FFFCE1]">✈</a>
                   </div>
                 </div>
               </div>
-              <div className="mt-5 grid grid-cols-3 gap-3 text-center">
+              <div className="mt-4 rounded-[28px] border border-[#0E100F]/10 dark:border-white/10 p-5">
+                <p className="text-xs tracking-[0.2em] font-bold opacity-60">TECH STACK</p>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {['Python', 'Django', 'DRF', 'Docker', 'PostgreSQL', 'Redis'].map((t) => (
+                    <span key={t} className="px-3 py-1.5 rounded-full border border-[#0E100F]/15 dark:border-white/15 text-xs font-medium">{t}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* SERVICES — "I can help you with." */}
+        <section className="px-4 max-w-6xl mx-auto mt-14">
+          <h2 className="font-display font-extrabold text-3xl md:text-5xl tracking-tight">I can help you with.</h2>
+          <div className="grid md:grid-cols-2 gap-x-10 gap-y-8 mt-8">
+            {SERVICES.map((s) => (
+              <div key={s.n} className="border-t border-[#0E100F]/15 dark:border-white/15 pt-5">
+                <p className="font-display font-extrabold text-4xl opacity-20">{s.n}</p>
+                <h3 className="font-display font-bold text-2xl mt-2">{s.title}</h3>
+                <p className="opacity-70 text-sm leading-relaxed mt-3">{s.text}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* PROJECTS — dates synced live from GitHub */}
+        <section id="projects" className="px-4 max-w-6xl mx-auto mt-20">
+          <h2 className="font-display font-extrabold text-3xl md:text-5xl tracking-tight">My Projects</h2>
+          <p className="opacity-60 mt-3 max-w-xl text-sm md:text-base">Backend projects — from RAG systems to full-stack clones, each shipped with real code. Dates sync live from GitHub. {apiStatus === 'online' && <span className="text-emerald-600 dark:text-emerald-300">● live from Django</span>}</p>
+
+          <div className="mt-8 space-y-10">
+            {projects.map((p) => {
+              const key = projectKey(p)
+              const live = githubDates[p.repo || repoFromUrl(p.code_url)]
+              const created = live?.created_at || p.created_at
+              const pushed = live?.pushed_at || p.pushed_at
+              const createdLabel = formatMonthYear(created)
+              const pushedLabel = formatMonthYear(pushed)
+              const dateBadge = pushedLabel && pushedLabel !== createdLabel
+                ? `${createdLabel} • Updated ${pushedLabel}`
+                : createdLabel || p.year || ''
+              const dateTitle = `Created ${created || 'unknown'}${pushed ? ` • Last push ${pushed}` : ''} — synced from GitHub`
+              const cover = covers[key]
+              return (
+              <article key={p.id ?? p.title} className="grid lg:grid-cols-2 gap-6 items-stretch border border-[#0E100F]/10 dark:border-white/10 rounded-[28px] p-4 md:p-6">
+                <div className={`rounded-2xl bg-gradient-to-br ${p.gradient || 'from-violet-600 to-indigo-600'} relative p-6 flex flex-col justify-between overflow-hidden min-h-[280px]`}>
+                  <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff22_1px,transparent_1px),linear-gradient(to_bottom,#ffffff22_1px,transparent_1px)] bg-[size:24px_24px] opacity-40" />
+                  <div className="relative flex justify-between items-start gap-3">
+                    <span title={dateTitle} className="px-3 py-1 rounded-full bg-white/20 backdrop-blur text-xs font-medium border border-white/20 text-white">{dateBadge} • GitHub</span>
+                  </div>
+                  <div className="relative flex-1 grid place-items-center py-6">
+                    {cover ? (
+                      <img src={cover} alt={`${p.title} cover`} className="max-h-44 w-full rounded-xl object-cover border border-white/20" />
+                    ) : (
+                      <span role="img" aria-label={`${p.title} icon`} className="text-7xl md:text-8xl drop-shadow-lg select-none">{p.emoji || '💻'}</span>
+                    )}
+                  </div>
+                  <div className="relative flex items-center justify-end gap-2">
+                    <label className="px-3 py-1.5 rounded-full bg-white/20 backdrop-blur border border-white/20 text-white text-xs font-semibold cursor-pointer hover:bg-white/30 transition">
+                      {cover ? 'Change photo' : 'Upload photo'}
+                      <input type="file" accept="image/*" className="sr-only" onChange={(e) => handleCoverUpload(e, key)} />
+                    </label>
+                    {cover && (
+                      <button type="button" onClick={() => handleCoverRemove(key)} className="px-3 py-1.5 rounded-full bg-black/30 backdrop-blur border border-white/20 text-white text-xs font-semibold hover:bg-black/50 transition">
+                        Reset to emoji
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="p-2 md:p-4 flex flex-col">
+                  <h3 className="font-display font-extrabold text-3xl tracking-tight">{p.title}</h3>
+                  <p className="font-semibold mt-2 opacity-80">{p.stack || (p.tags || []).join(', ')}</p>
+                  <p className="text-sm opacity-70 leading-relaxed mt-3 flex-1">{p.description}</p>
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {(p.tags || []).map((t) => <span key={t} className="px-2.5 py-1 rounded-full border border-[#0E100F]/15 dark:border-white/15 text-xs opacity-80">{t}</span>)}
+                  </div>
+                  <div className="flex gap-3 mt-5">
+                    <a href={p.code_url || '#'} target="_blank" rel="noreferrer" onClick={(e) => { if (!p.code_url || p.code_url === '#') { e.preventDefault(); showToast('Github repo private 🔒') } }} className="flex-1 text-center px-6 py-2.5 rounded-full bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] text-sm font-bold hover:opacity-85 transition">View Code ↗</a>
+                  </div>
+                </div>
+              </article>
+              )
+            })}
+          </div>
+        </section>
+
+        {/* ABOUT */}
+        <section id="about" className="px-4 max-w-6xl mx-auto mt-20">
+          <div className="grid md:grid-cols-12 gap-6">
+            <div className="md:col-span-5 border border-[#0E100F]/10 dark:border-white/10 rounded-[28px] p-8">
+              <p className="text-xs tracking-[0.2em] font-bold opacity-60">ABOUT ME</p>
+              <h2 className="font-display font-extrabold text-3xl mt-3 leading-tight">Building backends<br />with purpose &amp; precision</h2>
+              <p className="opacity-70 text-sm leading-relaxed mt-4">
+                I&apos;m a computer engineering student who loves turning complex problems into clean, reliable services. I bridge ideas and infrastructure — designing schemas, shipping REST APIs and containerizing everything with Docker.
+              </p>
+              <div className="mt-6">
                 {[
-                  { k: 'Python', v: 'Adv.' },
-                  { k: 'Django', v: 'Adv.' },
-                  { k: 'Repos', v: '19+' },
-                ].map((s) => (
-                  <div key={s.k} className="bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/5 rounded-2xl py-3 transition-colors">
-                    <p className="font-bold text-sm text-zinc-900 dark:text-white">{s.v}</p><p className="text-[10px] tracking-widest text-zinc-500">{s.k}</p>
+                  { l: 'Location', v: profile?.location || '404: Not Found 🌍' },
+                  { l: 'Focus', v: 'RAG systems & APIs' },
+                  { l: 'Email', v: displayEmail },
+                ].map((r) => (
+                  <div key={r.l} className="flex justify-between gap-4 text-sm py-3 border-b border-[#0E100F]/10 dark:border-white/10 last:border-0">
+                    <span className="opacity-60">{r.l}</span><span className="font-medium text-right break-all">{r.v}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-violet-600 to-indigo-600 rounded-[28px] p-6 text-white relative overflow-hidden shadow-xl">
-              <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/20 rounded-full blur-2xl" />
-              <p className="text-white/70 text-xs tracking-widest font-semibold">TECH STACK</p>
-              <div className="flex flex-wrap gap-2 mt-3">
-                {['Python', 'Django', 'DRF', 'Docker', 'PostgreSQL', 'Redis'].map((t) => (
-                  <span key={t} className="px-3 py-1.5 rounded-full bg-white/15 backdrop-blur border border-white/15 text-xs font-medium">{t}</span>
-                ))}
-              </div>
-              <div className="mt-6 flex items-center justify-between">
-                <div>
-                  <p className="text-3xl font-display font-bold">19+</p>
-                  <p className="text-xs text-white/70">Public repositories</p>
-                </div>
-                <a href={GITHUB} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-white text-violet-600 grid place-items-center hover:rotate-45 transition">↗</a>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-6 bg-white dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 rounded-full px-2 py-2 flex items-center gap-3 overflow-hidden shadow-sm dark:shadow-none transition-colors">
-          <span className="shrink-0 px-4 py-2 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-bold tracking-widest">WORKING WITH</span>
-          <div className="flex-1 flex gap-8 text-zinc-500 dark:text-zinc-500 text-sm font-medium overflow-x-auto whitespace-nowrap scrollbar-none">
-            <span>★ Django</span><span>★ DRF</span><span>★ PostgreSQL</span><span>★ Docker</span><span>★ Redis</span><span>★ MongoDB</span>
-          </div>
-          <span className="hidden md:inline pr-4 text-xs text-zinc-500">© 2026 — Crafted with passion</span>
-        </div>
-      </section>
-
-      {/* ABOUT */}
-      <section id="about" className="px-4 max-w-6xl mx-auto mt-6">
-        <div className="grid md:grid-cols-12 gap-6">
-          <div className="md:col-span-5 bg-white dark:bg-white/[0.04] backdrop-blur border border-zinc-200 dark:border-white/10 rounded-[28px] p-8 shadow-sm dark:shadow-none transition-colors duration-300">
-            <p className="text-violet-600 dark:text-violet-400 text-xs tracking-[0.2em] font-semibold">ABOUT ME</p>
-            <h2 className="font-display font-bold text-3xl mt-3 leading-tight text-zinc-900 dark:text-white">Building backends<br />with purpose & precision</h2>
-            <p className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed mt-4">
-              I'm a computer engineering student who loves turning complex problems into clean, reliable services. I bridge ideas and infrastructure — designing schemas, shipping REST APIs and containerizing everything with Docker.
-            </p>
-            <div className="mt-6 space-y-3">
-              {[
-                { l: 'Location', v: profile?.location || '404: Not Found 🌍' },
-                { l: 'Focus', v: 'RAG systems & APIs' },
-                { l: 'Email', v: displayEmail },
-              ].map((r) => (
-                <div key={r.l} className="flex justify-between text-sm py-3 border-b border-zinc-200 dark:border-white/5 last:border-0">
-                  <span className="text-zinc-500">{r.l}</span><span className="text-zinc-900 dark:text-white font-medium">{r.v}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="md:col-span-7 bg-zinc-50 dark:bg-gradient-to-br dark:from-zinc-900 dark:to-zinc-950 border border-zinc-200 dark:border-white/10 rounded-[28px] p-8 relative overflow-hidden shadow-sm dark:shadow-none transition-colors duration-300">
-            <div className="absolute inset-0 bg-gradient-to-br from-violet-600/5 dark:from-violet-600/10 via-transparent to-cyan-600/5 dark:to-cyan-600/10 pointer-events-none" />
-            <div className="relative">
+            <div className="md:col-span-7 border border-[#0E100F]/10 dark:border-white/10 rounded-[28px] p-8">
               <div className="flex flex-wrap gap-3">
-                <span className="px-4 py-2 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold">REST APIs</span>
-                <span className="px-4 py-2 rounded-full bg-white dark:bg-white/10 border border-zinc-200 dark:border-white/10 text-sm text-zinc-700 dark:text-white">Dockerized Deploys</span>
-                <span className="px-4 py-2 rounded-full bg-white dark:bg-white/10 border border-zinc-200 dark:border-white/10 text-sm text-zinc-700 dark:text-white">RAG Systems</span>
+                <span className="px-4 py-2 rounded-full bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] text-sm font-bold">REST APIs</span>
+                <span className="px-4 py-2 rounded-full border border-[#0E100F]/15 dark:border-white/15 text-sm">Dockerized Deploys</span>
+                <span className="px-4 py-2 rounded-full border border-[#0E100F]/15 dark:border-white/15 text-sm">RAG Systems</span>
               </div>
               <div className="grid sm:grid-cols-3 gap-4 mt-8">
                 {[
@@ -413,188 +601,152 @@ export default function App() {
                   { n: '111', d: 'GitHub followers' },
                   { n: '☕', d: 'Always (fun fact)' },
                 ].map((c) => (
-                  <div key={c.n} className="bg-white dark:bg-white/[0.06] border border-zinc-200 dark:border-white/10 rounded-2xl p-5 transition-colors">
-                    <p className="font-display font-bold text-2xl text-zinc-900 dark:text-white">{c.n}</p>
-                    <p className="text-xs text-zinc-500 mt-1">{c.d}</p>
+                  <div key={c.n} className="border border-[#0E100F]/10 dark:border-white/10 rounded-2xl p-5">
+                    <p className="font-display font-extrabold text-2xl">{c.n}</p>
+                    <p className="text-xs opacity-60 mt-1">{c.d}</p>
                   </div>
                 ))}
               </div>
-              <blockquote className="mt-8 bg-white dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 rounded-2xl p-5 text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed transition-colors">
-                "Let's build something great together!"
-                <span className="block mt-3 text-xs text-zinc-500">— Soroush, README.md</span>
+              <blockquote className="mt-8 border border-[#0E100F]/10 dark:border-white/10 rounded-2xl p-5 text-sm opacity-80 leading-relaxed">
+                &quot;Let&apos;s build something great together!&quot;
+                <span className="block mt-3 text-xs opacity-60">— Soroush, README.md</span>
               </blockquote>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* SKILLS */}
-      <section id="skills" className="px-4 max-w-6xl mx-auto mt-6">
-        <div className="bg-white dark:bg-white/[0.04] backdrop-blur border border-zinc-200 dark:border-white/10 rounded-[28px] p-8 md:p-10 shadow-sm dark:shadow-none transition-colors duration-300">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-cyan-600 dark:text-cyan-400 text-xs tracking-[0.2em] font-semibold">SKILLS & TOOLS</p>
-              <h2 className="font-display font-bold text-3xl mt-2 text-zinc-900 dark:text-white">Backend tools I ship with</h2>
-            </div>
-            <p className="text-zinc-500 dark:text-zinc-500 text-sm max-w-md">A curated stack I use daily to ship production-grade products — from idea to deployment. {apiStatus === 'online' && <span className="text-emerald-600 dark:text-emerald-400">● live from Django</span>}</p>
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
-            {apiStatus === 'checking'
-              ? Array.from({ length: 8 }).map((_, i) => (
-                  <div key={`skel-${i}`} className="animate-pulse bg-white dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 rounded-2xl p-5 h-[132px]">
-                    <div className="w-10 h-10 rounded-xl bg-zinc-200 dark:bg-white/10" />
-                    <div className="mt-4 h-4 w-2/3 bg-zinc-200 dark:bg-white/10 rounded" />
-                    <div className="mt-2 h-3 w-1/3 bg-zinc-100 dark:bg-white/5 rounded" />
-                    <div className="mt-3 h-1.5 bg-zinc-200 dark:bg-white/10 rounded-full" />
-                  </div>
-                ))
-              : skills.map((s) => (
-                  <div key={s.id ?? s.name} className="group bg-white dark:bg-transparent dark:bg-gradient-to-br dark:from-white/[0.06] dark:to-white/[0.02] border border-zinc-200 dark:border-white/10 rounded-2xl p-5 hover:border-violet-300 dark:hover:border-violet-500/30 hover:bg-zinc-50 dark:hover:bg-white/[0.08] transition shadow-sm dark:shadow-none">
-                    <div className="w-10 h-10 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 grid place-items-center font-bold text-sm group-hover:scale-105 transition">
-                      {s.icon || '◆'}
-                    </div>
-                    <h3 className="font-semibold mt-4 text-sm text-zinc-900 dark:text-white">{s.name}</h3>
-                    <p className="text-xs text-zinc-500 mt-1">{s.level}</p>
-                    <div className="mt-3 h-1.5 bg-zinc-200 dark:bg-white/10 rounded-full overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-violet-500 to-cyan-500 rounded-full" style={{ width: s.level === 'Advanced' ? '92%' : s.level === 'Beginner' ? '45%' : '78%' }} />
-                    </div>
-                  </div>
-                ))}
-          </div>
-        </div>
-      </section>
-
-      {/* PROJECTS */}
-      <section id="projects" className="px-4 max-w-6xl mx-auto mt-6">
-        <div className="flex items-end justify-between gap-4 mb-4 px-2">
-          <div>
-            <p className="text-fuchsia-600 dark:text-fuchsia-400 text-xs tracking-[0.2em] font-semibold">SELECTED WORK</p>
-            <h2 className="font-display font-bold text-3xl mt-2 text-zinc-900 dark:text-white">Featured projects</h2>
-          </div>
-          <a href="#" onClick={(e) => { e.preventDefault(); showToast('More projects coming soon 🚀') }} className="hidden md:inline-flex px-5 py-2.5 rounded-full bg-white dark:bg-white/10 border border-zinc-200 dark:border-white/10 text-sm text-zinc-700 dark:text-white hover:bg-zinc-50 dark:hover:bg-white/15 transition">View all →</a>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-6">
-          {apiStatus === 'checking'
-            ? Array.from({ length: 3 }).map((_, i) => (
-                <div key={`pskel-${i}`} className="animate-pulse bg-white dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 rounded-[28px] overflow-hidden h-[420px]">
-                  <div className="h-48 bg-zinc-200 dark:bg-white/10" />
-                  <div className="p-6 space-y-3">
-                    <div className="h-5 w-2/3 bg-zinc-200 dark:bg-white/10 rounded" />
-                    <div className="h-4 w-full bg-zinc-100 dark:bg-white/5 rounded" />
-                    <div className="h-4 w-5/6 bg-zinc-100 dark:bg-white/5 rounded" />
-                  </div>
+        {/* TOOLKIT */}
+        <section id="skills" className="px-4 max-w-6xl mx-auto mt-20">
+          <h2 className="font-display font-extrabold text-3xl md:text-5xl tracking-tight">My toolkit.</h2>
+          <div className="grid md:grid-cols-2 gap-x-10 gap-y-8 mt-8">
+            {TOOLKIT.map((g) => (
+              <div key={g.group} className="border-t border-[#0E100F]/15 dark:border-white/15 pt-5">
+                <h3 className="font-display font-bold text-xl">{g.group}</h3>
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {g.items.map((t) => (
+                    <span key={t} className="px-3 py-1.5 rounded-full border border-[#0E100F]/15 dark:border-white/15 text-xs font-medium opacity-80">{t}</span>
+                  ))}
                 </div>
-              ))
-            : projects.map((p) => (
-                <article key={p.id ?? p.title} className="group bg-white dark:bg-white/[0.04] backdrop-blur border border-zinc-200 dark:border-white/10 rounded-[28px] overflow-hidden hover:border-zinc-300 dark:hover:border-white/20 transition flex flex-col shadow-sm dark:shadow-none">
-                  <div className={`h-48 bg-gradient-to-br ${p.gradient} relative p-6 flex flex-col justify-between overflow-hidden`}>
-                    <div className="absolute inset-0 bg-[linear-gradient(to_right,#fff1_1px,transparent_1px),linear-gradient(to_bottom,#fff1_1px,transparent_1px)] bg-[size:24px_24px] opacity-30" />
-                    <div className="relative flex justify-between items-start">
-                      <span className="px-3 py-1 rounded-full bg-white/20 backdrop-blur text-xs font-medium border border-white/20 text-white">2024 • Case Study</span>
-                      <span className="w-8 h-8 rounded-full bg-white grid place-items-center text-zinc-900 group-hover:rotate-45 transition">↗</span>
-                    </div>
-                    <div className="relative">
-                      <div className="w-full h-20 rounded-xl bg-white/15 backdrop-blur border border-white/20 grid place-items-center text-white/80 text-xs">▦ Preview Mockup</div>
-                    </div>
-                  </div>
-                  <div className="p-6 flex-1 flex flex-col">
-                    <h3 className="font-display font-semibold text-lg leading-tight text-zinc-900 dark:text-white">{p.title}</h3>
-                    <p className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed mt-2 flex-1">{p.description}</p>
-                    <div className="flex flex-wrap gap-2 mt-4">
-                      {(p.tags || []).map((t) => <span key={t} className="px-2.5 py-1 rounded-full bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-xs text-zinc-600 dark:text-zinc-400">{t}</span>)}
-                    </div>
-                    <div className="flex gap-3 mt-5">
-                      <a href={p.demo_url || '#'} onClick={(e) => { if (p.demo_url === '#') { e.preventDefault(); showToast('Live demo coming soon 🔗') }}} className="flex-1 text-center py-2.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-100 transition">Live Demo</a>
-                      <a href={p.code_url || '#'} onClick={(e) => { if (p.code_url === '#') { e.preventDefault(); showToast('Github repo private 🔒') }}} className="px-5 py-2.5 rounded-full bg-zinc-100 dark:bg-white/10 border border-zinc-200 dark:border-white/10 text-sm text-zinc-700 dark:text-white hover:bg-zinc-200 dark:hover:bg-white/15 transition">Code</a>
-                    </div>
-                  </div>
-                </article>
-              ))}
-        </div>
-      </section>
+              </div>
+            ))}
+          </div>
 
-      {/* CONTACT */}
-      <section id="contact" className="px-4 max-w-6xl mx-auto mt-6 mb-10">
-        <div className="grid lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-5 bg-gradient-to-br from-violet-600 via-indigo-600 to-cyan-600 rounded-[28px] p-8 text-white relative overflow-hidden shadow-xl">
-            <div className="absolute -right-16 -top-16 w-60 h-60 bg-white/20 rounded-full blur-2xl" />
-            <div className="relative">
-              <p className="text-white/70 text-xs tracking-[0.2em] font-semibold">GET IN TOUCH</p>
-              <h2 className="font-display font-bold text-3xl mt-3 leading-tight">Let's build<br />something great</h2>
-              <p className="text-white/80 text-sm mt-3 leading-relaxed">Have an idea or want to collaborate? I'm open to internships, freelance work and open-source projects. Drop a message and I'll reply within 24h.</p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-10">
+            {skills.map((s) => (
+              <div key={s.id ?? s.name} className="group border border-[#0E100F]/10 dark:border-white/10 rounded-2xl p-5 hover:opacity-80 transition">
+                <div className="w-10 h-10 rounded-xl bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] grid place-items-center font-bold text-sm">
+                  {s.icon || '◆'}
+                </div>
+                <h3 className="font-semibold mt-4 text-sm">{s.name}</h3>
+                <p className="text-xs opacity-60 mt-1">{s.level}</p>
+                <div className="mt-3 h-1.5 bg-[#0E100F]/10 dark:bg-white/10 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-[#8B7CFF] via-[#5EEAD4] to-[#FACC15] rounded-full" style={{ width: s.level === 'Advanced' ? '92%' : s.level === 'Beginner' ? '45%' : '78%' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* CONTACT */}
+        <section id="contact" className="px-4 max-w-6xl mx-auto mt-20 mb-10">
+          <div className="grid lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-5 rounded-[28px] p-8 bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] relative overflow-hidden">
+              <p className="text-xs tracking-[0.2em] font-bold opacity-60">GET IN TOUCH</p>
+              <h2 className="font-display font-extrabold text-3xl md:text-4xl mt-3 leading-tight">Contact Me</h2>
+              <p className="opacity-70 text-sm mt-3 leading-relaxed">Have an idea or want to collaborate? I&apos;m open to internships, freelance work and open-source projects. Drop a message and I&apos;ll reply within 24h.</p>
 
               <div className="mt-8 space-y-3">
-                <a href={`mailto:${displayEmail}`} className="flex items-center gap-3 bg-white/15 backdrop-blur border border-white/20 rounded-2xl px-4 py-3 hover:bg-white/20 transition">
-                  <span className="w-9 h-9 rounded-xl bg-white text-violet-600 grid place-items-center">✉</span>
-                  <span className="text-sm font-medium">{displayEmail}</span>
+                <a href={`mailto:${displayEmail}`} className="flex items-center gap-3 border border-current/20 rounded-2xl px-4 py-3 hover:opacity-80 transition">
+                  <span className="w-9 h-9 rounded-xl bg-current/10 grid place-items-center">✉</span>
+                  <span className="text-sm font-medium break-all">{displayEmail}</span>
                 </a>
-                <a href="https://t.me/inairplanemode" target="_blank" rel="noreferrer" className="flex items-center gap-3 bg-white/10 border border-white/15 rounded-2xl px-4 py-3">
-                  <span className="w-9 h-9 rounded-xl bg-white/20 grid place-items-center">✈</span>
+                <a href="https://t.me/inairplanemode" target="_blank" rel="noreferrer" className="flex items-center gap-3 border border-current/20 rounded-2xl px-4 py-3 hover:opacity-80 transition">
+                  <span className="w-9 h-9 rounded-xl bg-current/10 grid place-items-center">✈</span>
                   <span className="text-sm">{displayTelegram}</span>
                 </a>
                 <div className="flex gap-3 pt-2">
                   {[
                     { l: 'GitHub', h: GITHUB },
-                    { l: 'X / Twitter', h: profile?.twitter || 'https://x.com/Hoodi_guy' },
+                    { l: 'X', h: profile?.twitter || 'https://x.com/Hoodi_guy' },
                     { l: 'Telegram', h: 'https://t.me/inairplanemode' },
                     { l: 'Instagram', h: 'https://www.instagram.com/soroush_eghdami_/' },
                   ].map((s) => (
-                    <a key={s.l} href={s.h} target="_blank" rel="noreferrer" title={s.l} className="w-9 h-9 rounded-full bg-white/15 border border-white/20 grid place-items-center text-xs font-bold hover:bg-white hover:text-violet-600 transition">{s.l[0]}</a>
+                    <a key={s.l} href={s.h} target="_blank" rel="noreferrer" title={s.l} className="w-9 h-9 rounded-full border border-current/20 grid place-items-center text-xs font-bold hover:opacity-70 transition">{s.l[0]}</a>
                   ))}
                 </div>
               </div>
             </div>
-          </div>
 
-          <form onSubmit={handleSubmit} noValidate className="lg:col-span-7 bg-white dark:bg-white/[0.04] backdrop-blur border border-zinc-200 dark:border-white/10 rounded-[28px] p-8 shadow-sm dark:shadow-none transition-colors duration-300">
-            {/* honeypot */}
-            <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
-            <div className="grid sm:grid-cols-2 gap-4">
-              <label className="space-y-1.5">
-                <span className="text-xs tracking-widest text-zinc-500 font-semibold">FULL NAME</span>
-                <input name="name" required maxLength={100} placeholder="John Doe" aria-invalid={!!formErrors.name} aria-describedby={formErrors.name ? 'err-name' : undefined} className={`w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-white/[0.06] border text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-zinc-900 dark:text-white focus:outline-none focus:border-violet-400 dark:focus:border-violet-500/50 focus:bg-white dark:focus:bg-white/[0.08] transition ${formErrors.name ? 'border-red-400 dark:border-red-500' : 'border-zinc-200 dark:border-white/10'}`} />
-                {formErrors.name && <p id="err-name" className="text-xs text-red-600 dark:text-red-400">{formErrors.name}</p>}
+            <form onSubmit={handleSubmit} noValidate className="lg:col-span-7 border border-[#0E100F]/10 dark:border-white/10 rounded-[28px] p-8">
+              <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
+              <div className="grid sm:grid-cols-2 gap-4">
+                <label className="space-y-1.5">
+                  <span className="text-xs tracking-widest opacity-60 font-bold">FULL NAME</span>
+                  <input name="name" required maxLength={100} placeholder="John Doe" aria-invalid={!!formErrors.name} className={`w-full px-4 py-3 rounded-xl bg-transparent border text-sm placeholder:opacity-40 focus:outline-none transition ${formErrors.name ? 'border-red-500' : 'border-[#0E100F]/15 dark:border-white/15'}`} />
+                  {formErrors.name && <p className="text-xs text-red-500">{formErrors.name}</p>}
+                </label>
+                <label className="space-y-1.5">
+                  <span className="text-xs tracking-widest opacity-60 font-bold">EMAIL ADDRESS</span>
+                  <input name="email" required type="email" maxLength={254} placeholder="john@example.com" aria-invalid={!!formErrors.email} className={`w-full px-4 py-3 rounded-xl bg-transparent border text-sm placeholder:opacity-40 focus:outline-none transition ${formErrors.email ? 'border-red-500' : 'border-[#0E100F]/15 dark:border-white/15'}`} />
+                  {formErrors.email && <p className="text-xs text-red-500">{formErrors.email}</p>}
+                </label>
+              </div>
+              <label className="space-y-1.5 block mt-4">
+                <span className="text-xs tracking-widest opacity-60 font-bold">SUBJECT</span>
+                <input name="subject" placeholder="Project inquiry" maxLength={200} className={`w-full px-4 py-3 rounded-xl bg-transparent border text-sm placeholder:opacity-40 focus:outline-none transition ${formErrors.subject ? 'border-red-500' : 'border-[#0E100F]/15 dark:border-white/15'}`} />
+                {formErrors.subject && <p className="text-xs text-red-500">{formErrors.subject}</p>}
               </label>
-              <label className="space-y-1.5">
-                <span className="text-xs tracking-widest text-zinc-500 font-semibold">EMAIL ADDRESS</span>
-                <input name="email" required type="email" maxLength={254} placeholder="john@example.com" aria-invalid={!!formErrors.email} aria-describedby={formErrors.email ? 'err-email' : undefined} className={`w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-white/[0.06] border text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-zinc-900 dark:text-white focus:outline-none focus:border-violet-400 dark:focus:border-violet-500/50 transition ${formErrors.email ? 'border-red-400 dark:border-red-500' : 'border-zinc-200 dark:border-white/10'}`} />
-                {formErrors.email && <p id="err-email" className="text-xs text-red-600 dark:text-red-400">{formErrors.email}</p>}
+              <label className="space-y-1.5 block mt-4">
+                <span className="text-xs tracking-widest opacity-60 font-bold">MESSAGE</span>
+                <textarea name="message" required rows={4} maxLength={5000} placeholder="Tell me about your project..." className={`w-full px-4 py-3 rounded-xl bg-transparent border text-sm placeholder:opacity-40 focus:outline-none resize-none transition ${formErrors.message ? 'border-red-500' : 'border-[#0E100F]/15 dark:border-white/15'}`} />
+                {formErrors.message && <p className="text-xs text-red-500">{formErrors.message}</p>}
               </label>
-            </div>
-            <label className="space-y-1.5 block mt-4">
-              <span className="text-xs tracking-widest text-zinc-500 font-semibold">SUBJECT</span>
-              <input name="subject" placeholder="Project inquiry" maxLength={200} aria-invalid={!!formErrors.subject} aria-describedby={formErrors.subject ? 'err-subject' : undefined} className={`w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-white/[0.06] border text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-zinc-900 dark:text-white focus:outline-none focus:border-violet-400 dark:focus:border-violet-500/50 transition ${formErrors.subject ? 'border-red-400 dark:border-red-500' : 'border-zinc-200 dark:border-white/10'}`} />
-              {formErrors.subject && <p id="err-subject" className="text-xs text-red-600 dark:text-red-400">{formErrors.subject}</p>}
-            </label>
-            <label className="space-y-1.5 block mt-4">
-              <span className="text-xs tracking-widest text-zinc-500 font-semibold">MESSAGE</span>
-              <textarea name="message" required rows={4} maxLength={5000} placeholder="Tell me about your project..." aria-invalid={!!formErrors.message} aria-describedby={formErrors.message ? 'err-message' : undefined} className={`w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-white/[0.06] border text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-zinc-900 dark:text-white focus:outline-none focus:border-violet-400 dark:focus:border-violet-500/50 resize-none transition ${formErrors.message ? 'border-red-400 dark:border-red-500' : 'border-zinc-200 dark:border-white/10'}`} />
-              {formErrors.message && <p id="err-message" className="text-xs text-red-600 dark:text-red-400">{formErrors.message}</p>}
-            </label>
-            <button type="submit" disabled={sending} className="mt-6 w-full py-3.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold text-sm hover:bg-zinc-800 dark:hover:bg-zinc-100 transition inline-flex items-center justify-center gap-2 disabled:opacity-60">
-              {sending ? 'Sending...' : 'Send Message'} <span className="w-6 h-6 rounded-full bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white grid place-items-center text-xs">→</span>
-            </button>
-            <p className="text-center text-xs text-zinc-500 mt-3">Avg. response time — 3 hours ⚡ {apiStatus === 'online' ? '· Django API connected' : '· API offline — local fallback'}</p>
-          </form>
-        </div>
-      </section>
+              <button type="submit" disabled={sending} className="mt-6 w-full py-3.5 rounded-full bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] font-bold text-sm hover:opacity-85 transition inline-flex items-center justify-center gap-2 disabled:opacity-60">
+                {sending ? 'Sending...' : 'Send Message'} <span aria-hidden="true">→</span>
+              </button>
+              <p className="text-center text-xs opacity-60 mt-3">Avg. response time — 3 hours ⚡ {apiStatus === 'online' ? '· Django API connected' : '· API offline — local fallback'}</p>
+            </form>
+          </div>
+        </section>
       </main>
 
-      <footer className="border-t border-zinc-200 dark:border-white/10 py-6 px-4 transition-colors">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3 text-sm text-zinc-500">
-          <p>© 2026 {displayName}. Built with React + Tailwind + Vite + Django. Crafted with ♥ and ☕.</p>
-          <div className="flex gap-6">
-            <a href="#" onClick={(e) => { e.preventDefault(); showToast('Privacy — coming soon') }} className="hover:text-zinc-900 dark:hover:text-white transition">Privacy</a>
-            <a href="#" onClick={(e) => { e.preventDefault(); showToast('Terms — coming soon') }} className="hover:text-zinc-900 dark:hover:text-white transition">Terms</a>
-            <a href="/sitemap.xml" target="_blank" rel="noreferrer" className="hover:text-zinc-900 dark:hover:text-white transition">Sitemap</a>
+      {/* FOOTER — reference style */}
+      <footer className="border-t border-[#0E100F]/10 dark:border-white/10 px-4 pt-12 pb-6">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="font-display font-extrabold text-3xl md:text-5xl tracking-tight leading-tight">Where aesthetics &amp;<br />functionality meet</h2>
+          <div className="grid md:grid-cols-3 gap-8 mt-10">
+            <div>
+              <p className="text-xs tracking-[0.2em] font-bold opacity-60">EXPLORE</p>
+              <div className="flex flex-col gap-2 mt-4 text-sm font-medium">
+                <a href="#home" className="hover:opacity-60 transition">Home</a>
+                <a href="#projects" className="hover:opacity-60 transition">Projects</a>
+                <a href="#about" className="hover:opacity-60 transition">About Me</a>
+                <a href="#contact" className="hover:opacity-60 transition">Contact</a>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs tracking-[0.2em] font-bold opacity-60">FOLLOW ME</p>
+              <div className="flex flex-col gap-2 mt-4 text-sm font-medium">
+                <a href="https://github.com/Soroush-Eghdami" target="_blank" rel="noreferrer" className="hover:opacity-60 transition">Github</a>
+                <a href="https://x.com/Hoodi_guy" target="_blank" rel="noreferrer" className="hover:opacity-60 transition">Twitter / X</a>
+                <a href="https://t.me/inairplanemode" target="_blank" rel="noreferrer" className="hover:opacity-60 transition">Telegram</a>
+                <a href="https://www.instagram.com/soroush_eghdami_/" target="_blank" rel="noreferrer" className="hover:opacity-60 transition">Instagram</a>
+              </div>
+            </div>
+            <div className="flex flex-col gap-3">
+              <a href="#contact" className="px-6 py-3 rounded-full bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] text-sm font-bold text-center hover:opacity-85 transition">Contact Me</a>
+              <a href="#projects" className="px-6 py-3 rounded-full border border-[#0E100F]/20 dark:border-white/20 text-sm font-semibold text-center hover:opacity-70 transition">Say Hello ! — Explore Projects</a>
+            </div>
+          </div>
+          <div className="flex flex-col md:flex-row items-center justify-between gap-3 mt-10 pt-6 border-t border-[#0E100F]/10 dark:border-white/10 text-sm opacity-70">
+            <p>{shortName} ©2026 - Privacy Policy</p>
+            <p>Built with React + Tailwind + Vite + Django</p>
           </div>
         </div>
       </footer>
 
       {toast && (
-        <div role="status" aria-live="polite" aria-atomic="true" className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-zinc-900 dark:bg-zinc-900 border border-white/15 text-white text-sm px-5 py-3 rounded-full shadow-2xl backdrop-blur z-50">
+        <div role="status" aria-live="polite" aria-atomic="true" className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] text-sm px-5 py-3 rounded-full shadow-2xl z-50">
           {toast}
         </div>
       )}
