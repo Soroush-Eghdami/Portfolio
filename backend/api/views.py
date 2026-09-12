@@ -9,6 +9,11 @@ from rest_framework.throttling import AnonRateThrottle
 
 from .models import Skill, Project, Profile, ContactMessage
 from .serializers import SkillSerializer, ProjectSerializer, ProfileSerializer, ContactMessageSerializer
+from .services import send_contact_email
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ContactRateThrottle(AnonRateThrottle):
@@ -48,6 +53,11 @@ class ContactMessageCreate(generics.CreateAPIView):
     serializer_class = ContactMessageSerializer
     permission_classes = [permissions.AllowAny]
     throttle_classes = [ContactRateThrottle]
+
+    def perform_create(self, serializer):
+        msg = serializer.save()
+        if not send_contact_email(msg):
+            logger.warning("Contact message #%s saved but notification email failed", msg.pk)
 
 
 @extend_schema(

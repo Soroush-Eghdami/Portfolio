@@ -1,6 +1,8 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
-from .models import Skill, Project, Profile
+from unittest.mock import patch
+from .models import Skill, Project, Profile, ContactMessage
+from .services import send_contact_email
 
 
 class HealthTests(TestCase):
@@ -77,3 +79,44 @@ class ContactTests(TestCase):
         client = APIClient()
         resp = client.get("/api/schema/")
         self.assertEqual(resp.status_code, 200)
+
+
+class ContactEmailTests(TestCase):
+    def _msg(self):
+        return ContactMessage.objects.create(
+            name="Visitor",
+            email="visitor@example.com",
+            subject="Hello",
+            message="This message is long enough to pass validation.",
+        )
+
+    @override_settings(
+        EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+        CONTACT_RECIPIENT_EMAIL="me@example.com",
+    )
+    def test_send_contact_email_ok(self):
+        from django.core import mail
+
+        self.assertTrue(send_contact_email(self._msg()))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("visitor@example.com", mail.outbox[0].reply_to)
+
+    @override_settings(CONTACT_RECIPIENT_EMAIL="", EMAIL_HOST_USER="")
+    def test_send_contact_email_no_recipient(self):
+        self.assertFalse(send_contact_email(self._msg()))
+
+    @override_settings(CONTACT_RECIPIENT_EMAIL="me@example.com")
+    def test_send_contact_email_failure_returns_false(self):
+        with patch("api.services.EmailMessage.send", side_effect=OSError("smtp down")):
+            self.assertFalse(send_contact_email(self._msg()))
+
+    @override_settings(
+        EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+        CONTACT_RECIPIENT_EMAIL="me@example.com",
+    )
+    def test_contact_post_still_saves_when_email_ok(self):
+        client = APIClient()
+        payload = {"name": "Test User", "email": "test@example.com", "message": "Hello this is a valid message with enough length."}
+        resp = client.post("/api/contact/", payload, format="json")
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(ContactMessage.objects.count(), 1)

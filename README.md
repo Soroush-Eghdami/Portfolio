@@ -110,6 +110,14 @@ POSTGRES_PASSWORD=postgres
 POSTGRES_HOST=db
 ```
 
+Contact form notifications (Gmail SMTP — optional; without these, messages are only saved to the DB):
+```
+EMAIL_HOST_USER=you@gmail.com
+EMAIL_HOST_PASSWORD=xxxx-xxxx-xxxx-xxxx
+CONTACT_RECIPIENT_EMAIL=you@gmail.com
+```
+The backend container already loads `.env` via `env_file`, so these reach prod with no compose change. Use a Gmail **app password**, never your login password.
+
 To auto-create Django admin:
 ```env
 DJANGO_SUPERUSER_USERNAME=admin
