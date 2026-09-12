@@ -2,6 +2,13 @@
 export default {
   darkMode: 'class',
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  // Project card gradients come from the API (DB) at runtime, so Tailwind
+  // can't see those class names while scanning source — safelist them.
+  safelist: [
+    {
+      pattern: /^(from|to)-(violet|fuchsia|pink|indigo|cyan|blue|teal|emerald|amber|orange|red)-(400|500|600|700)$/,
+    },
+  ],
   theme: {
     extend: {
       fontFamily: {

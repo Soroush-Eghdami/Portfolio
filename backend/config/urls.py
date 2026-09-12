@@ -8,5 +8,5 @@ urlpatterns = [
     path("api/", include("api.urls")),
 ]
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Serve uploaded media (project covers) in all envs — in prod nginx proxies /media/ here
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

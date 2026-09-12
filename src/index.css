@@ -30,3 +30,39 @@ html.light ::-webkit-scrollbar-track { background: #EFEAD2; }
 .text-balance { text-wrap: balance; }
 .scrollbar-none::-webkit-scrollbar { display: none; }
 .scrollbar-none { scrollbar-width: none; }
+
+/* anchored sections clear the fixed navbar */
+section[id] { scroll-margin-top: 88px; }
+
+/* nav link underline sweep */
+.nav-link { position: relative; }
+.nav-link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 100%;
+  bottom: -4px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(to right, #8B7CFF, #5EEAD4);
+  transition: right 0.3s ease;
+}
+.nav-link:hover::after { right: 0; }
+
+/* scroll-reveal entrance (buttery ease-out; classes are removed after entrance
+   so they never fight hover transforms) */
+.reveal { opacity: 0; transform: translateY(26px); transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1), transform 0.8s cubic-bezier(0.22, 1, 0.36, 1); }
+.reveal-visible { opacity: 1; transform: none; }
+
+/* toast pop-in */
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, 12px) scale(0.97); }
+  to { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+.toast-in { animation: toast-in 0.25s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { scroll-behavior: auto; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .toast-in { animation: none; }
+}

@@ -1,4 +1,11 @@
+from django.core.exceptions import ValidationError
+from django.core.validators import FileExtensionValidator
 from django.db import models
+
+
+def validate_cv_size(value):
+    if value.size > 10 * 1024 * 1024:
+        raise ValidationError("CV must be under 10MB.")
 
 class Skill(models.Model):
     LEVEL_CHOICES = [("Beginner", "Beginner"), ("Intermediate", "Intermediate"), ("Advanced", "Advanced")]
@@ -26,7 +33,10 @@ class Project(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField()
     tags = models.JSONField(default=list, blank=True, help_text="List of tags e.g. ['React','Tailwind']")
+    stack = models.CharField(max_length=200, blank=True, default="", help_text="Short stack line shown under the title e.g. 'Django, PostgreSQL'")
     gradient = models.CharField(max_length=100, choices=GRADIENT_CHOICES, default="from-violet-600 to-indigo-600")
+    emoji = models.CharField(max_length=10, blank=True, default="💻", help_text="Fallback cover icon shown when no cover image is uploaded")
+    cover = models.ImageField(upload_to="project_covers/", blank=True, null=True, help_text="Cover photo managed in Django admin — visitors cannot upload")
     demo_url = models.URLField(blank=True, default="#")
     code_url = models.URLField(blank=True, default="#")
     featured = models.BooleanField(default=True)
@@ -50,6 +60,13 @@ class Profile(models.Model):
     github = models.URLField(blank=True)
     linkedin = models.URLField(blank=True)
     twitter = models.URLField(blank=True)
+    cv = models.FileField(
+        upload_to="cvs/",
+        blank=True,
+        null=True,
+        validators=[FileExtensionValidator(["pdf", "doc", "docx"]), validate_cv_size],
+        help_text="Upload your CV in Django admin — visitors download it from the portfolio hero button",
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):

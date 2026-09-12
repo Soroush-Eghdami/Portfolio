@@ -9,7 +9,7 @@ class SkillSerializer(serializers.ModelSerializer):
 class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
-        fields = ["id", "title", "description", "tags", "gradient", "demo_url", "code_url", "featured", "order"]
+        fields = ["id", "title", "description", "tags", "stack", "gradient", "emoji", "cover", "demo_url", "code_url", "featured", "order"]
 
     def validate_tags(self, value):
         if not isinstance(value, list):
@@ -26,7 +26,7 @@ class ProjectSerializer(serializers.ModelSerializer):
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
-        fields = ["id", "name", "role", "bio", "location", "email", "phone", "github", "linkedin", "twitter"]
+        fields = ["id", "name", "role", "bio", "location", "email", "phone", "github", "linkedin", "twitter", "cv"]
 
 class ContactMessageSerializer(serializers.ModelSerializer):
     class Meta:

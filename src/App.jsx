@@ -51,6 +51,19 @@ const FALLBACK_PROJECTS = [
   },
   {
     id: 3,
+    title: 'CakeShop',
+    repo: 'CakeShop',
+    emoji: '🍰',
+    description: 'Online cake store — product listings, shopping cart and order flow for handcrafted cakes, built with React and Tailwind CSS.',
+    tags: ['React', 'Tailwind', 'E-commerce'],
+    stack: 'React, Tailwind, E-commerce',
+    created_at: '2026-08-04T15:52:52Z',
+    pushed_at: '2026-08-17T11:51:21Z',
+    gradient: 'from-orange-500 to-red-600',
+    code_url: `${GITHUB}/CakeShop`,
+  },
+  {
+    id: 4,
     title: 'Online-shop-CBV',
     repo: 'Online-shop-CBV',
     emoji: '🛒',
@@ -63,7 +76,7 @@ const FALLBACK_PROJECTS = [
     code_url: `${GITHUB}/Online-shop-CBV`,
   },
   {
-    id: 4,
+    id: 5,
     title: 'Summerizer',
     repo: 'Summerizer',
     emoji: '📝',
@@ -90,8 +103,19 @@ function formatMonthYear(iso) {
   return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
 }
 
-function projectKey(p) {
-  return p.repo || repoFromUrl(p.code_url) || p.title
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+
+function resolveMediaUrl(cover) {
+  if (!cover) return ''
+  if (/^https?:\/\//i.test(cover) || cover.startsWith('data:')) return cover
+  return `${API_BASE}${cover.startsWith('/') ? cover : `/${cover}`}`
+}
+
+function levelWidth(level) {
+  const l = String(level || '').toLowerCase()
+  if (l.startsWith('begin')) return '20%'
+  if (l.startsWith('adv')) return '88%'
+  return '58%'
 }
 
 const SERVICES = [
@@ -118,10 +142,10 @@ const SERVICES = [
 ]
 
 const TOOLKIT = [
-  { group: 'Backend', items: ['Python', 'Django', 'DRF', 'Flask', 'REST APIs', 'C++'] },
-  { group: 'Data', items: ['PostgreSQL', 'MongoDB', 'Redis', 'SQL', 'Embeddings', 'RAG'] },
-  { group: 'DevOps', items: ['Docker', 'Git', 'Linux', 'Nginx', 'CI', 'Compose'] },
-  { group: 'AI', items: ['Transformers', 'Groq API', 'Prompt Engineering', 'Summarization', 'Rapid Iteration', 'AI Prototyping'] },
+  { group: 'Backend & APIs', items: ['Python', 'Django', 'DRF', 'Flask', 'REST APIs', 'JWT Auth', 'CBV', 'C++'] },
+  { group: 'Databases & Caching', items: ['PostgreSQL', 'MongoDB', 'Redis', 'SQLite', 'SQL', 'Indexing'] },
+  { group: 'DevOps & Infra', items: ['Docker', 'Compose', 'Nginx', 'Gunicorn', 'Linux', 'Git & CI'] },
+  { group: 'AI & Pipelines', items: ['RAG', 'Embeddings', 'Transformers', 'Groq API', 'PDF Parsing', 'Prompt Engineering'] },
 ]
 
 function SunIcon() {
@@ -152,13 +176,7 @@ export default function App() {
   const [sending, setSending] = useState(false)
   const [formErrors, setFormErrors] = useState({})
   const [githubDates, setGithubDates] = useState({})
-  const [covers, setCovers] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('project-covers-v1') || '{}')
-    } catch {
-      return {}
-    }
-  })
+  const [githubProfile, setGithubProfile] = useState(null)
   const [theme, setTheme] = useState(() => {
     if (typeof window === 'undefined') return 'dark'
     const saved = localStorage.getItem('theme')
@@ -192,6 +210,35 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // Scroll-reveal entrance for elements with .reveal
+  useEffect(() => {
+    const els = document.querySelectorAll('.reveal')
+    if (!('IntersectionObserver' in window)) {
+      els.forEach((el) => el.classList.add('reveal-visible'))
+      return
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((en) => {
+          if (!en.isIntersecting) return
+          const el = en.target
+          io.unobserve(el)
+          el.classList.add('reveal-visible')
+          // Clean up after the entrance finishes: clears stagger delays and
+          // removes transform rules so hover lifts work without lag or conflict
+          const delay = parseFloat(el.style.transitionDelay) || 0
+          setTimeout(() => {
+            el.classList.remove('reveal', 'reveal-visible')
+            el.style.transitionDelay = ''
+          }, delay + 900)
+        })
+      },
+      { threshold: 0.1 }
+    )
+    els.forEach((el) => io.observe(el))
+    return () => io.disconnect()
+  }, [projects.length, skills.length])
+
   useEffect(() => {
     let cancelled = false
     Promise.allSettled([api.getSkills(), api.getProjects(), api.getProfile(), api.health()])
@@ -206,6 +253,8 @@ export default function App() {
               ...x,
               repo: x.repo || repoFromUrl(x.code_url) || fb.repo,
               emoji: x.emoji || fb.emoji,
+              cover: x.cover || fb.cover || '',
+              stack: x.stack || fb.stack,
               gradient: x.gradient || fb.gradient,
               created_at: x.created_at || fb.created_at,
               pushed_at: x.pushed_at || fb.pushed_at,
@@ -248,53 +297,27 @@ export default function App() {
     return () => { cancelled = true }
   }, [projects.length])
 
+  // Live social info from the GitHub profile (bio, X handle, blog, location)
+  useEffect(() => {
+    let cancelled = false
+    fetch('https://api.github.com/users/Soroush-Eghdami', {
+      headers: { Accept: 'application/vnd.github+json' },
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error(`GitHub ${r.status}`)
+        return r.json()
+      })
+      .then((d) => { if (!cancelled) setGithubProfile(d) })
+      .catch(() => { /* offline — fallbacks below cover it */ })
+    return () => { cancelled = true }
+  }, [])
+
   const showToast = (msg) => {
     setToast(msg)
     setTimeout(() => setToast(''), 3000)
   }
 
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
-
-  const handleCoverUpload = (e, key) => {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
-    if (!file.type.startsWith('image/')) {
-      showToast('Please choose an image file 🖼️')
-      return
-    }
-    if (file.size > 3 * 1024 * 1024) {
-      showToast('Image must be under 3MB 📦')
-      return
-    }
-    const reader = new FileReader()
-    reader.onload = () => {
-      const dataUrl = reader.result
-      setCovers((prev) => {
-        const next = { ...prev, [key]: dataUrl }
-        try {
-          localStorage.setItem('project-covers-v1', JSON.stringify(next))
-        } catch {
-          showToast('Image saved for this session only (storage full) 🖼️')
-        }
-        return next
-      })
-      showToast('Cover photo updated ✨')
-    }
-    reader.readAsDataURL(file)
-  }
-
-  const handleCoverRemove = (key) => {
-    setCovers((prev) => {
-      const next = { ...prev }
-      delete next[key]
-      try {
-        localStorage.setItem('project-covers-v1', JSON.stringify(next))
-      } catch { /* ignore */ }
-      return next
-    })
-    showToast('Cover reset to emoji ↩️')
-  }
 
   const validate = (payload) => {
     const errs = {}
@@ -354,6 +377,12 @@ export default function App() {
   const displayRole = profile?.role || 'Python Backend Developer'
   const displayEmail = profile?.email || 'Soroush.egh@gmail.com'
   const displayTelegram = '@inairplanemode'
+  // Socials: backend profile first, then live GitHub profile, then defaults
+  const xHandle = githubProfile?.twitter_username ? `@${githubProfile.twitter_username}` : null
+  const xUrl = profile?.twitter || (githubProfile?.twitter_username ? `https://x.com/${githubProfile.twitter_username}` : 'https://x.com/Hoodi_guy')
+  const blogUrl = githubProfile?.blog ? (/^https?:\/\//i.test(githubProfile.blog) ? githubProfile.blog : `https://${githubProfile.blog}`) : ''
+  const blogHost = blogUrl ? blogUrl.replace(/^https?:\/\//i, '').split('/')[0] : ''
+  const cvUrl = profile?.cv ? resolveMediaUrl(profile.cv) : ''
 
   return (
     <div className="min-h-screen bg-[#FFFCE1] text-[#0E100F] dark:bg-[#0E100F] dark:text-[#FFFCE1] transition-colors duration-300 selection:bg-[#8B7CFF]/40">
@@ -367,14 +396,14 @@ export default function App() {
       {/* NAVBAR — reference style */}
       <header className={`fixed top-0 inset-x-0 z-50 transition-all ${scrolled ? 'py-3' : 'py-5'}`}>
         <nav aria-label="Primary" className={`mx-auto max-w-6xl px-4 flex items-center justify-between gap-4 transition-colors duration-300 ${scrolled ? 'bg-[#FFFCE1]/85 dark:bg-[#0E100F]/85 backdrop-blur-xl border border-[#0E100F]/10 dark:border-white/10 rounded-full px-6 py-3 shadow-xl' : 'bg-transparent border border-transparent'}`}>
-          <a href="#home" className="font-display font-extrabold text-lg tracking-tight">
+          <a href="#home" className="group font-display font-extrabold text-lg tracking-tight">
             {shortName}
-            <span className="text-[#8B7CFF]">.</span>
+            <span className="text-[#8B7CFF] inline-block transition-transform duration-300 group-hover:scale-125">.</span>
           </a>
 
           <div className="hidden md:flex items-center gap-6 text-sm font-medium">
             {NAV.map((n) => (
-              <a key={n.id} href={`#${n.id}`} className="opacity-70 hover:opacity-100 transition">
+              <a key={n.id} href={`#${n.id}`} className="nav-link opacity-70 hover:opacity-100 transition">
                 {n.label}
               </a>
             ))}
@@ -441,12 +470,21 @@ export default function App() {
               </p>
 
               <div className="flex flex-wrap gap-3 mt-8">
-                <a href="#projects" className="px-7 py-3.5 rounded-full bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] font-bold text-sm inline-flex items-center gap-2 hover:opacity-85 transition">
-                  View Projects <span aria-hidden="true">↗</span>
+                <a href="#projects" className="group px-7 py-3.5 rounded-full bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] font-bold text-sm inline-flex items-center gap-2 transition-all duration-300 hover:scale-[1.03] hover:shadow-xl active:scale-[0.98]">
+                  View Projects <span aria-hidden="true" className="inline-block transition-transform duration-300 group-hover:translate-x-1">↗</span>
                 </a>
-                <a href="#contact" className="px-7 py-3.5 rounded-full border border-[#0E100F]/20 dark:border-white/20 font-semibold text-sm hover:opacity-70 transition">
-                  Say Hello !
+                <a href="#contact" className="group px-7 py-3.5 rounded-full border border-[#0E100F]/20 dark:border-white/20 font-semibold text-sm transition-all duration-300 hover:scale-[1.03] hover:border-[#8B7CFF]/60 active:scale-[0.98]">
+                  Say Hello ! <span aria-hidden="true" className="inline-block transition-transform duration-300 group-hover:translate-x-1">→</span>
                 </a>
+                {cvUrl ? (
+                  <a href={cvUrl} download className="group px-7 py-3.5 rounded-full border border-[#0E100F]/20 dark:border-white/20 font-semibold text-sm transition-all duration-300 hover:scale-[1.03] hover:border-[#8B7CFF]/60 active:scale-[0.98]">
+                    Download CV <span aria-hidden="true" className="inline-block transition-transform duration-300 group-hover:translate-y-0.5">↓</span>
+                  </a>
+                ) : (
+                  <button type="button" onClick={() => showToast('CV coming soon 📄')} className="group px-7 py-3.5 rounded-full border border-[#0E100F]/20 dark:border-white/20 font-semibold text-sm transition-all duration-300 hover:scale-[1.03] hover:border-[#8B7CFF]/60 active:scale-[0.98] opacity-70">
+                    Download CV <span aria-hidden="true" className="inline-block transition-transform duration-300 group-hover:translate-y-0.5">↓</span>
+                  </button>
+                )}
               </div>
 
               <div className="flex items-center gap-6 mt-8 pt-6 border-t border-[#0E100F]/10 dark:border-white/10">
@@ -466,17 +504,19 @@ export default function App() {
             </div>
 
             <div className="lg:col-span-5">
-              <div className="rounded-[28px] overflow-hidden border border-[#0E100F]/10 dark:border-white/10 bg-[#0E100F] dark:bg-[#1A1C1A]">
-                <img src={AVATAR} alt={`${displayName} — ${displayRole}`} className="w-full aspect-square object-cover" />
+              <div className="group rounded-[28px] overflow-hidden border border-[#0E100F]/10 dark:border-white/10 bg-[#0E100F] dark:bg-[#1A1C1A] transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
+                <div className="overflow-hidden">
+                  <img src={AVATAR} alt={`${displayName} — ${displayRole}`} className="w-full aspect-square object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
+                </div>
                 <div className="p-5 flex items-center justify-between">
                   <div>
                     <p className="font-display font-bold text-[#FFFCE1]">{displayName}</p>
                     <p className="text-xs text-[#FFFCE1]/60">{displayRole} · AI / Django / Docker</p>
                   </div>
                   <div className="flex gap-2">
-                    <a href={profile?.github || GITHUB} target="_blank" rel="noreferrer" title="GitHub" className="w-8 h-8 rounded-full bg-[#FFFCE1] text-[#0E100F] grid place-items-center text-xs font-bold">G</a>
-                    <a href={profile?.twitter || 'https://x.com/Hoodi_guy'} target="_blank" rel="noreferrer" title="X" className="w-8 h-8 rounded-full border border-white/20 grid place-items-center text-xs text-[#FFFCE1]">𝕏</a>
-                    <a href="https://t.me/inairplanemode" target="_blank" rel="noreferrer" title="Telegram" className="w-8 h-8 rounded-full border border-white/20 grid place-items-center text-xs text-[#FFFCE1]">✈</a>
+                    <a href={profile?.github || GITHUB} target="_blank" rel="noreferrer" title="GitHub" className="w-8 h-8 rounded-full bg-[#FFFCE1] text-[#0E100F] grid place-items-center text-xs font-bold transition-transform duration-300 hover:scale-110">G</a>
+                    <a href={xUrl} target="_blank" rel="noreferrer" title="X" className="w-8 h-8 rounded-full border border-white/20 grid place-items-center text-xs text-[#FFFCE1] transition-all duration-300 hover:scale-110 hover:bg-white/10">𝕏</a>
+                    <a href="https://t.me/inairplanemode" target="_blank" rel="noreferrer" title="Telegram" className="w-8 h-8 rounded-full border border-white/20 grid place-items-center text-xs text-[#FFFCE1] transition-all duration-300 hover:scale-110 hover:bg-white/10">✈</a>
                   </div>
                 </div>
               </div>
@@ -484,7 +524,7 @@ export default function App() {
                 <p className="text-xs tracking-[0.2em] font-bold opacity-60">TECH STACK</p>
                 <div className="flex flex-wrap gap-2 mt-3">
                   {['Python', 'Django', 'DRF', 'Docker', 'PostgreSQL', 'Redis'].map((t) => (
-                    <span key={t} className="px-3 py-1.5 rounded-full border border-[#0E100F]/15 dark:border-white/15 text-xs font-medium">{t}</span>
+                    <span key={t} className="px-3 py-1.5 rounded-full border border-[#0E100F]/15 dark:border-white/15 text-xs font-medium transition-all duration-300 hover:scale-105 hover:bg-[#0E100F] hover:text-[#FFFCE1] dark:hover:bg-[#FFFCE1] dark:hover:text-[#0E100F] cursor-default">{t}</span>
                   ))}
                 </div>
               </div>
@@ -494,11 +534,11 @@ export default function App() {
 
         {/* SERVICES — "I can help you with." */}
         <section className="px-4 max-w-6xl mx-auto mt-14">
-          <h2 className="font-display font-extrabold text-3xl md:text-5xl tracking-tight">I can help you with.</h2>
+          <h2 className="reveal font-display font-extrabold text-3xl md:text-5xl tracking-tight">I can help you with.</h2>
           <div className="grid md:grid-cols-2 gap-x-10 gap-y-8 mt-8">
-            {SERVICES.map((s) => (
-              <div key={s.n} className="border-t border-[#0E100F]/15 dark:border-white/15 pt-5">
-                <p className="font-display font-extrabold text-4xl opacity-20">{s.n}</p>
+            {SERVICES.map((s, i) => (
+              <div key={s.n} style={{ transitionDelay: `${i * 100}ms` }} className="reveal group border-t border-[#0E100F]/15 dark:border-white/15 pt-5 transition-all duration-300 hover:translate-x-2 hover:border-[#8B7CFF]/60 will-change-transform">
+                <p className="font-display font-extrabold text-4xl opacity-20 transition-all duration-300 group-hover:opacity-60 group-hover:text-[#8B7CFF]">{s.n}</p>
                 <h3 className="font-display font-bold text-2xl mt-2">{s.title}</h3>
                 <p className="opacity-70 text-sm leading-relaxed mt-3">{s.text}</p>
               </div>
@@ -508,12 +548,11 @@ export default function App() {
 
         {/* PROJECTS — dates synced live from GitHub */}
         <section id="projects" className="px-4 max-w-6xl mx-auto mt-20">
-          <h2 className="font-display font-extrabold text-3xl md:text-5xl tracking-tight">My Projects</h2>
+          <h2 className="reveal font-display font-extrabold text-3xl md:text-5xl tracking-tight">My Projects</h2>
           <p className="opacity-60 mt-3 max-w-xl text-sm md:text-base">Backend projects — from RAG systems to full-stack clones, each shipped with real code. Dates sync live from GitHub. {apiStatus === 'online' && <span className="text-emerald-600 dark:text-emerald-300">● live from Django</span>}</p>
 
           <div className="mt-8 space-y-10">
-            {projects.map((p) => {
-              const key = projectKey(p)
+            {projects.map((p, pi) => {
               const live = githubDates[p.repo || repoFromUrl(p.code_url)]
               const created = live?.created_at || p.created_at
               const pushed = live?.pushed_at || p.pushed_at
@@ -523,30 +562,20 @@ export default function App() {
                 ? `${createdLabel} • Updated ${pushedLabel}`
                 : createdLabel || p.year || ''
               const dateTitle = `Created ${created || 'unknown'}${pushed ? ` • Last push ${pushed}` : ''} — synced from GitHub`
-              const cover = covers[key]
+              const cover = resolveMediaUrl(p.cover)
               return (
-              <article key={p.id ?? p.title} className="grid lg:grid-cols-2 gap-6 items-stretch border border-[#0E100F]/10 dark:border-white/10 rounded-[28px] p-4 md:p-6">
+              <article key={p.id ?? p.title} style={{ transitionDelay: `${(pi % 4) * 90}ms` }} className="reveal group grid lg:grid-cols-2 gap-6 items-stretch border border-[#0E100F]/10 dark:border-white/10 rounded-[28px] p-4 md:p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-[#8B7CFF]/10 hover:border-[#8B7CFF]/40 dark:hover:border-[#8B7CFF]/40">
                 <div className={`rounded-2xl bg-gradient-to-br ${p.gradient || 'from-violet-600 to-indigo-600'} relative p-6 flex flex-col justify-between overflow-hidden min-h-[280px]`}>
-                  <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff22_1px,transparent_1px),linear-gradient(to_bottom,#ffffff22_1px,transparent_1px)] bg-[size:24px_24px] opacity-40" />
+                  <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff22_1px,transparent_1px),linear-gradient(to_bottom,#ffffff22_1px,transparent_1px)] bg-[size:24px_24px] opacity-40 transition-opacity duration-300 group-hover:opacity-60" />
+                  <div className="absolute -right-12 -bottom-12 w-48 h-48 bg-white/10 rounded-full blur-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
                   <div className="relative flex justify-between items-start gap-3">
                     <span title={dateTitle} className="px-3 py-1 rounded-full bg-white/20 backdrop-blur text-xs font-medium border border-white/20 text-white">{dateBadge} • GitHub</span>
                   </div>
-                  <div className="relative flex-1 grid place-items-center py-6">
+                  <div className="relative flex-1 grid place-items-center py-6 overflow-hidden">
                     {cover ? (
-                      <img src={cover} alt={`${p.title} cover`} className="max-h-44 w-full rounded-xl object-cover border border-white/20" />
+                      <img src={cover} alt={`${p.title} cover`} loading="lazy" className="max-h-44 w-full rounded-xl object-cover border border-white/20 transition-transform duration-500 group-hover:scale-[1.04]" />
                     ) : (
-                      <span role="img" aria-label={`${p.title} icon`} className="text-7xl md:text-8xl drop-shadow-lg select-none">{p.emoji || '💻'}</span>
-                    )}
-                  </div>
-                  <div className="relative flex items-center justify-end gap-2">
-                    <label className="px-3 py-1.5 rounded-full bg-white/20 backdrop-blur border border-white/20 text-white text-xs font-semibold cursor-pointer hover:bg-white/30 transition">
-                      {cover ? 'Change photo' : 'Upload photo'}
-                      <input type="file" accept="image/*" className="sr-only" onChange={(e) => handleCoverUpload(e, key)} />
-                    </label>
-                    {cover && (
-                      <button type="button" onClick={() => handleCoverRemove(key)} className="px-3 py-1.5 rounded-full bg-black/30 backdrop-blur border border-white/20 text-white text-xs font-semibold hover:bg-black/50 transition">
-                        Reset to emoji
-                      </button>
+                      <span role="img" aria-label={`${p.title} icon`} className="text-7xl md:text-8xl drop-shadow-lg select-none transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-6">{p.emoji || '💻'}</span>
                     )}
                   </div>
                 </div>
@@ -555,10 +584,10 @@ export default function App() {
                   <p className="font-semibold mt-2 opacity-80">{p.stack || (p.tags || []).join(', ')}</p>
                   <p className="text-sm opacity-70 leading-relaxed mt-3 flex-1">{p.description}</p>
                   <div className="flex flex-wrap gap-2 mt-4">
-                    {(p.tags || []).map((t) => <span key={t} className="px-2.5 py-1 rounded-full border border-[#0E100F]/15 dark:border-white/15 text-xs opacity-80">{t}</span>)}
+                    {(p.tags || []).map((t) => <span key={t} className="px-2.5 py-1 rounded-full border border-[#0E100F]/15 dark:border-white/15 text-xs opacity-80 transition-all duration-300 hover:opacity-100 hover:border-[#8B7CFF]/60 hover:scale-105 cursor-default">{t}</span>)}
                   </div>
                   <div className="flex gap-3 mt-5">
-                    <a href={p.code_url || '#'} target="_blank" rel="noreferrer" onClick={(e) => { if (!p.code_url || p.code_url === '#') { e.preventDefault(); showToast('Github repo private 🔒') } }} className="flex-1 text-center px-6 py-2.5 rounded-full bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] text-sm font-bold hover:opacity-85 transition">View Code ↗</a>
+                    <a href={p.code_url || '#'} target="_blank" rel="noreferrer" onClick={(e) => { if (!p.code_url || p.code_url === '#') { e.preventDefault(); showToast('Github repo private 🔒') } }} className="group/btn flex-1 text-center px-6 py-2.5 rounded-full bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] text-sm font-bold transition-all duration-300 hover:shadow-xl hover:shadow-[#8B7CFF]/20 active:scale-[0.98]">View Code <span aria-hidden="true" className="inline-block transition-transform duration-300 group-hover/btn:translate-x-1">↗</span></a>
                   </div>
                 </div>
               </article>
@@ -576,9 +605,14 @@ export default function App() {
               <p className="opacity-70 text-sm leading-relaxed mt-4">
                 I&apos;m a computer engineering student who loves turning complex problems into clean, reliable services. I bridge ideas and infrastructure — designing schemas, shipping REST APIs and containerizing everything with Docker.
               </p>
+              {githubProfile?.bio && (
+                <p className="text-sm leading-relaxed mt-3 border-l-2 border-[#8B7CFF]/60 pl-3 opacity-80">
+                  On GitHub: &ldquo;{githubProfile.bio}&rdquo;
+                </p>
+              )}
               <div className="mt-6">
                 {[
-                  { l: 'Location', v: profile?.location || '404: Not Found 🌍' },
+                  { l: 'Location', v: profile?.location || githubProfile?.location || '404: Not Found 🌍' },
                   { l: 'Focus', v: 'RAG systems & APIs' },
                   { l: 'Email', v: displayEmail },
                 ].map((r) => (
@@ -617,14 +651,14 @@ export default function App() {
 
         {/* TOOLKIT */}
         <section id="skills" className="px-4 max-w-6xl mx-auto mt-20">
-          <h2 className="font-display font-extrabold text-3xl md:text-5xl tracking-tight">My toolkit.</h2>
+          <h2 className="reveal font-display font-extrabold text-3xl md:text-5xl tracking-tight">My toolkit.</h2>
           <div className="grid md:grid-cols-2 gap-x-10 gap-y-8 mt-8">
-            {TOOLKIT.map((g) => (
-              <div key={g.group} className="border-t border-[#0E100F]/15 dark:border-white/15 pt-5">
+            {TOOLKIT.map((g, gi) => (
+              <div key={g.group} style={{ transitionDelay: `${gi * 100}ms` }} className="reveal border-t border-[#0E100F]/15 dark:border-white/15 pt-5 transition-colors duration-300 hover:border-[#8B7CFF]/60">
                 <h3 className="font-display font-bold text-xl">{g.group}</h3>
                 <div className="flex flex-wrap gap-2 mt-4">
                   {g.items.map((t) => (
-                    <span key={t} className="px-3 py-1.5 rounded-full border border-[#0E100F]/15 dark:border-white/15 text-xs font-medium opacity-80">{t}</span>
+                    <span key={t} className="px-3 py-1.5 rounded-full border border-[#0E100F]/15 dark:border-white/15 text-xs font-medium opacity-80 transition-all duration-300 hover:opacity-100 hover:scale-105 hover:bg-[#0E100F] hover:text-[#FFFCE1] dark:hover:bg-[#FFFCE1] dark:hover:text-[#0E100F] cursor-default">{t}</span>
                   ))}
                 </div>
               </div>
@@ -632,15 +666,15 @@ export default function App() {
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-10">
-            {skills.map((s) => (
-              <div key={s.id ?? s.name} className="group border border-[#0E100F]/10 dark:border-white/10 rounded-2xl p-5 hover:opacity-80 transition">
-                <div className="w-10 h-10 rounded-xl bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] grid place-items-center font-bold text-sm">
+            {skills.map((s, si) => (
+              <div key={s.id ?? s.name} style={{ transitionDelay: `${(si % 4) * 80}ms` }} className="reveal group border border-[#0E100F]/10 dark:border-white/10 rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-[#8B7CFF]/50">
+                <div className="w-10 h-10 rounded-xl bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] grid place-items-center font-bold text-sm transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6">
                   {s.icon || '◆'}
                 </div>
                 <h3 className="font-semibold mt-4 text-sm">{s.name}</h3>
                 <p className="text-xs opacity-60 mt-1">{s.level}</p>
                 <div className="mt-3 h-1.5 bg-[#0E100F]/10 dark:bg-white/10 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-[#8B7CFF] via-[#5EEAD4] to-[#FACC15] rounded-full" style={{ width: s.level === 'Advanced' ? '92%' : s.level === 'Beginner' ? '45%' : '78%' }} />
+                  <div className="h-full bg-gradient-to-r from-[#8B7CFF] via-[#5EEAD4] to-[#FACC15] rounded-full transition-all duration-500" style={{ width: levelWidth(s.level) }} />
                 </div>
               </div>
             ))}
@@ -656,22 +690,34 @@ export default function App() {
               <p className="opacity-70 text-sm mt-3 leading-relaxed">Have an idea or want to collaborate? I&apos;m open to internships, freelance work and open-source projects. Drop a message and I&apos;ll reply within 24h.</p>
 
               <div className="mt-8 space-y-3">
-                <a href={`mailto:${displayEmail}`} className="flex items-center gap-3 border border-current/20 rounded-2xl px-4 py-3 hover:opacity-80 transition">
+                <a href={`mailto:${displayEmail}`} className="flex items-center gap-3 border border-current/20 rounded-2xl px-4 py-3 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
                   <span className="w-9 h-9 rounded-xl bg-current/10 grid place-items-center">✉</span>
                   <span className="text-sm font-medium break-all">{displayEmail}</span>
                 </a>
-                <a href="https://t.me/inairplanemode" target="_blank" rel="noreferrer" className="flex items-center gap-3 border border-current/20 rounded-2xl px-4 py-3 hover:opacity-80 transition">
+                <a href="https://t.me/inairplanemode" target="_blank" rel="noreferrer" className="flex items-center gap-3 border border-current/20 rounded-2xl px-4 py-3 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
                   <span className="w-9 h-9 rounded-xl bg-current/10 grid place-items-center">✈</span>
                   <span className="text-sm">{displayTelegram}</span>
                 </a>
+                {xHandle && (
+                  <a href={xUrl} target="_blank" rel="noreferrer" className="flex items-center gap-3 border border-current/20 rounded-2xl px-4 py-3 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
+                    <span className="w-9 h-9 rounded-xl bg-current/10 grid place-items-center text-sm font-bold">𝕏</span>
+                    <span className="text-sm">{xHandle} <span className="opacity-60">· via GitHub</span></span>
+                  </a>
+                )}
+                {blogUrl && (
+                  <a href={blogUrl} target="_blank" rel="noreferrer" className="flex items-center gap-3 border border-current/20 rounded-2xl px-4 py-3 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
+                    <span className="w-9 h-9 rounded-xl bg-current/10 grid place-items-center">🌐</span>
+                    <span className="text-sm break-all">{blogHost} <span className="opacity-60">· via GitHub</span></span>
+                  </a>
+                )}
                 <div className="flex gap-3 pt-2">
                   {[
                     { l: 'GitHub', h: GITHUB },
-                    { l: 'X', h: profile?.twitter || 'https://x.com/Hoodi_guy' },
+                    { l: 'X', h: xUrl },
                     { l: 'Telegram', h: 'https://t.me/inairplanemode' },
                     { l: 'Instagram', h: 'https://www.instagram.com/soroush_eghdami_/' },
                   ].map((s) => (
-                    <a key={s.l} href={s.h} target="_blank" rel="noreferrer" title={s.l} className="w-9 h-9 rounded-full border border-current/20 grid place-items-center text-xs font-bold hover:opacity-70 transition">{s.l[0]}</a>
+                    <a key={s.l} href={s.h} target="_blank" rel="noreferrer" title={s.l} className="w-9 h-9 rounded-full border border-current/20 grid place-items-center text-xs font-bold transition-all duration-300 hover:scale-110">{s.l[0]}</a>
                   ))}
                 </div>
               </div>
@@ -682,18 +728,18 @@ export default function App() {
               <div className="grid sm:grid-cols-2 gap-4">
                 <label className="space-y-1.5">
                   <span className="text-xs tracking-widest opacity-60 font-bold">FULL NAME</span>
-                  <input name="name" required maxLength={100} placeholder="John Doe" aria-invalid={!!formErrors.name} className={`w-full px-4 py-3 rounded-xl bg-transparent border text-sm placeholder:opacity-40 focus:outline-none transition ${formErrors.name ? 'border-red-500' : 'border-[#0E100F]/15 dark:border-white/15'}`} />
+                  <input name="name" required maxLength={100} placeholder="John Doe" aria-invalid={!!formErrors.name} className={`w-full px-4 py-3 rounded-xl bg-transparent border text-sm placeholder:opacity-40 focus:outline-none transition focus:border-[#8B7CFF] focus:ring-2 focus:ring-[#8B7CFF]/30 ${formErrors.name ? 'border-red-500' : 'border-[#0E100F]/15 dark:border-white/15'}`} />
                   {formErrors.name && <p className="text-xs text-red-500">{formErrors.name}</p>}
                 </label>
                 <label className="space-y-1.5">
                   <span className="text-xs tracking-widest opacity-60 font-bold">EMAIL ADDRESS</span>
-                  <input name="email" required type="email" maxLength={254} placeholder="john@example.com" aria-invalid={!!formErrors.email} className={`w-full px-4 py-3 rounded-xl bg-transparent border text-sm placeholder:opacity-40 focus:outline-none transition ${formErrors.email ? 'border-red-500' : 'border-[#0E100F]/15 dark:border-white/15'}`} />
+                  <input name="email" required type="email" maxLength={254} placeholder="john@example.com" aria-invalid={!!formErrors.email} className={`w-full px-4 py-3 rounded-xl bg-transparent border text-sm placeholder:opacity-40 focus:outline-none transition focus:border-[#8B7CFF] focus:ring-2 focus:ring-[#8B7CFF]/30 ${formErrors.email ? 'border-red-500' : 'border-[#0E100F]/15 dark:border-white/15'}`} />
                   {formErrors.email && <p className="text-xs text-red-500">{formErrors.email}</p>}
                 </label>
               </div>
               <label className="space-y-1.5 block mt-4">
                 <span className="text-xs tracking-widest opacity-60 font-bold">SUBJECT</span>
-                <input name="subject" placeholder="Project inquiry" maxLength={200} className={`w-full px-4 py-3 rounded-xl bg-transparent border text-sm placeholder:opacity-40 focus:outline-none transition ${formErrors.subject ? 'border-red-500' : 'border-[#0E100F]/15 dark:border-white/15'}`} />
+                <input name="subject" placeholder="Project inquiry" maxLength={200} className={`w-full px-4 py-3 rounded-xl bg-transparent border text-sm placeholder:opacity-40 focus:outline-none transition focus:border-[#8B7CFF] focus:ring-2 focus:ring-[#8B7CFF]/30 ${formErrors.subject ? 'border-red-500' : 'border-[#0E100F]/15 dark:border-white/15'}`} />
                 {formErrors.subject && <p className="text-xs text-red-500">{formErrors.subject}</p>}
               </label>
               <label className="space-y-1.5 block mt-4">
@@ -701,8 +747,8 @@ export default function App() {
                 <textarea name="message" required rows={4} maxLength={5000} placeholder="Tell me about your project..." className={`w-full px-4 py-3 rounded-xl bg-transparent border text-sm placeholder:opacity-40 focus:outline-none resize-none transition ${formErrors.message ? 'border-red-500' : 'border-[#0E100F]/15 dark:border-white/15'}`} />
                 {formErrors.message && <p className="text-xs text-red-500">{formErrors.message}</p>}
               </label>
-              <button type="submit" disabled={sending} className="mt-6 w-full py-3.5 rounded-full bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] font-bold text-sm hover:opacity-85 transition inline-flex items-center justify-center gap-2 disabled:opacity-60">
-                {sending ? 'Sending...' : 'Send Message'} <span aria-hidden="true">→</span>
+              <button type="submit" disabled={sending} className="group mt-6 w-full py-3.5 rounded-full bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] font-bold text-sm transition-all duration-300 hover:shadow-xl hover:shadow-[#8B7CFF]/20 active:scale-[0.99] inline-flex items-center justify-center gap-2 disabled:opacity-60">
+                {sending ? 'Sending...' : 'Send Message'} <span aria-hidden="true" className="inline-block transition-transform duration-300 group-hover:translate-x-1">→</span>
               </button>
               <p className="text-center text-xs opacity-60 mt-3">Avg. response time — 3 hours ⚡ {apiStatus === 'online' ? '· Django API connected' : '· API offline — local fallback'}</p>
             </form>
@@ -717,25 +763,25 @@ export default function App() {
           <div className="grid md:grid-cols-3 gap-8 mt-10">
             <div>
               <p className="text-xs tracking-[0.2em] font-bold opacity-60">EXPLORE</p>
-              <div className="flex flex-col gap-2 mt-4 text-sm font-medium">
-                <a href="#home" className="hover:opacity-60 transition">Home</a>
-                <a href="#projects" className="hover:opacity-60 transition">Projects</a>
-                <a href="#about" className="hover:opacity-60 transition">About Me</a>
-                <a href="#contact" className="hover:opacity-60 transition">Contact</a>
+              <div className="flex flex-col gap-2 mt-4 text-sm font-medium items-start">
+                <a href="#home" className="transition-all duration-300 hover:translate-x-1 hover:opacity-100 opacity-80">Home</a>
+                <a href="#projects" className="transition-all duration-300 hover:translate-x-1 hover:opacity-100 opacity-80">Projects</a>
+                <a href="#about" className="transition-all duration-300 hover:translate-x-1 hover:opacity-100 opacity-80">About Me</a>
+                <a href="#contact" className="transition-all duration-300 hover:translate-x-1 hover:opacity-100 opacity-80">Contact</a>
               </div>
             </div>
             <div>
               <p className="text-xs tracking-[0.2em] font-bold opacity-60">FOLLOW ME</p>
-              <div className="flex flex-col gap-2 mt-4 text-sm font-medium">
-                <a href="https://github.com/Soroush-Eghdami" target="_blank" rel="noreferrer" className="hover:opacity-60 transition">Github</a>
-                <a href="https://x.com/Hoodi_guy" target="_blank" rel="noreferrer" className="hover:opacity-60 transition">Twitter / X</a>
-                <a href="https://t.me/inairplanemode" target="_blank" rel="noreferrer" className="hover:opacity-60 transition">Telegram</a>
-                <a href="https://www.instagram.com/soroush_eghdami_/" target="_blank" rel="noreferrer" className="hover:opacity-60 transition">Instagram</a>
+              <div className="flex flex-col gap-2 mt-4 text-sm font-medium items-start">
+                <a href="https://github.com/Soroush-Eghdami" target="_blank" rel="noreferrer" className="transition-all duration-300 hover:translate-x-1 hover:opacity-100 opacity-80">Github</a>
+                <a href={xUrl} target="_blank" rel="noreferrer" className="transition-all duration-300 hover:translate-x-1 hover:opacity-100 opacity-80">Twitter / X</a>
+                <a href="https://t.me/inairplanemode" target="_blank" rel="noreferrer" className="transition-all duration-300 hover:translate-x-1 hover:opacity-100 opacity-80">Telegram</a>
+                <a href="https://www.instagram.com/soroush_eghdami_/" target="_blank" rel="noreferrer" className="transition-all duration-300 hover:translate-x-1 hover:opacity-100 opacity-80">Instagram</a>
               </div>
             </div>
             <div className="flex flex-col gap-3">
-              <a href="#contact" className="px-6 py-3 rounded-full bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] text-sm font-bold text-center hover:opacity-85 transition">Contact Me</a>
-              <a href="#projects" className="px-6 py-3 rounded-full border border-[#0E100F]/20 dark:border-white/20 text-sm font-semibold text-center hover:opacity-70 transition">Say Hello ! — Explore Projects</a>
+              <a href="#contact" className="px-6 py-3 rounded-full bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] text-sm font-bold text-center transition-all duration-300 hover:scale-[1.02] hover:shadow-xl active:scale-[0.98]">Contact Me</a>
+              <a href="#projects" className="px-6 py-3 rounded-full border border-[#0E100F]/20 dark:border-white/20 text-sm font-semibold text-center transition-all duration-300 hover:scale-[1.02] hover:border-[#8B7CFF]/60 active:scale-[0.98]">Say Hello ! — Explore Projects</a>
             </div>
           </div>
           <div className="flex flex-col md:flex-row items-center justify-between gap-3 mt-10 pt-6 border-t border-[#0E100F]/10 dark:border-white/10 text-sm opacity-70">
@@ -746,7 +792,7 @@ export default function App() {
       </footer>
 
       {toast && (
-        <div role="status" aria-live="polite" aria-atomic="true" className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] text-sm px-5 py-3 rounded-full shadow-2xl z-50">
+        <div role="status" aria-live="polite" aria-atomic="true" className="toast-in fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] text-sm px-5 py-3 rounded-full shadow-2xl z-50">
           {toast}
         </div>
       )}
