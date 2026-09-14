@@ -13,13 +13,13 @@ const AVATAR = 'https://avatars.githubusercontent.com/u/204998566?v=4'
 
 const FALLBACK_SKILLS = [
   { id: 1, name: 'Python', level: 'Advanced', icon: '🐍' },
-  { id: 2, name: 'Django / DRF', level: 'Advanced', icon: '🌐' },
-  { id: 3, name: 'REST APIs', level: 'Advanced', icon: '🔗' },
+  { id: 2, name: 'Django', level: 'Advanced', icon: '🌐' },
+  { id: 3, name: 'DRF', level: 'Advanced', icon: '🔗' },
   { id: 4, name: 'Docker', level: 'Intermediate', icon: '🐳' },
   { id: 5, name: 'PostgreSQL', level: 'Intermediate', icon: '🐘' },
   { id: 6, name: 'MongoDB', level: 'Intermediate', icon: '🍃' },
   { id: 7, name: 'Redis', level: 'Beginner', icon: '⚡' },
-  { id: 8, name: 'C++', level: 'Intermediate', icon: '➕' },
+  // { id: 8, name: 'C++', level: 'Intermediate', icon: '➕' },
 ]
 
 const FALLBACK_PROJECTS = [
@@ -142,7 +142,7 @@ const SERVICES = [
 ]
 
 const TOOLKIT = [
-  { group: 'Backend & APIs', items: ['Python', 'Django', 'DRF', 'Flask', 'REST APIs', 'JWT Auth', 'CBV', 'C++'] },
+  { group: 'Backend & APIs', items: ['Python', 'Django', 'DRF', 'Flask', 'REST APIs', 'JWT Auth', 'CBV'] },
   { group: 'Databases & Caching', items: ['PostgreSQL', 'MongoDB', 'Redis', 'SQLite', 'SQL', 'Indexing'] },
   { group: 'DevOps & Infra', items: ['Docker', 'Compose', 'Nginx', 'Gunicorn', 'Linux', 'Git & CI'] },
   { group: 'AI & Pipelines', items: ['RAG', 'Embeddings', 'Transformers', 'Groq API', 'PDF Parsing', 'Prompt Engineering'] },
