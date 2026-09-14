@@ -18,8 +18,11 @@ export default {
       colors: {
         ink: '#0E100F',
         inksoft: '#1A1C1A',
-        cream: '#FFFCE1',
-        creamdim: '#D6D3C0',
+        cream: '#F7F2EA',
+        creamdim: '#E9DFCB',
+        paper: '#F7F2EA',
+        aqua: '#4BC7D1',
+        aquadeep: '#2FA8B4',
         accentv: '#8B7CFF',
         accentc: '#5EEAD4',
         accenty: '#FACC15',

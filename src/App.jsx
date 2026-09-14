@@ -239,6 +239,39 @@ export default function App() {
     return () => io.disconnect()
   }, [projects.length, skills.length])
 
+  // Pointer 3D tilt + cursor spotlight for glass cards (both themes, neon in dark)
+  useEffect(() => {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    const cards = Array.from(document.querySelectorAll('.glass-3d'))
+    if (!cards.length) return
+    const onMove = (e) => {
+      const el = e.currentTarget
+      const r = el.getBoundingClientRect()
+      const px = (e.clientX - r.left) / r.width
+      const py = (e.clientY - r.top) / r.height
+      el.style.setProperty('--mx', `${(px * 100).toFixed(1)}%`)
+      el.style.setProperty('--my', `${(py * 100).toFixed(1)}%`)
+      const rx = ((0.5 - py) * 7).toFixed(2)
+      const ry = ((px - 0.5) * 9).toFixed(2)
+      el.style.transform = `perspective(900px) rotateX(${rx}deg) rotateY(${ry}deg) translateY(-4px)`
+    }
+    const onLeave = (e) => {
+      e.currentTarget.style.transform = ''
+    }
+    cards.forEach((el) => {
+      el.classList.add('tilt')
+      el.addEventListener('pointermove', onMove)
+      el.addEventListener('pointerleave', onLeave)
+    })
+    return () => {
+      cards.forEach((el) => {
+        el.classList.remove('tilt')
+        el.removeEventListener('pointermove', onMove)
+        el.removeEventListener('pointerleave', onLeave)
+      })
+    }
+  }, [projects.length, skills.length])
+
   useEffect(() => {
     let cancelled = false
     Promise.allSettled([api.getSkills(), api.getProjects(), api.getProfile(), api.health()])
@@ -385,20 +418,27 @@ export default function App() {
   const cvUrl = profile?.cv ? resolveMediaUrl(profile.cv) : ''
 
   return (
-    <div className="min-h-screen bg-[#FFFCE1] text-[#0E100F] dark:bg-[#0E100F] dark:text-[#FFFCE1] transition-colors duration-300 selection:bg-[#8B7CFF]/40">
-      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[60] focus:px-4 focus:py-2 focus:rounded-full focus:bg-[#0E100F] focus:text-[#FFFCE1] dark:focus:bg-[#FFFCE1] dark:focus:text-[#0E100F]">
+    <div className="min-h-screen bg-[#F7F2EA] text-[#0E100F] dark:bg-[#0E100F] dark:text-[#FFFCE1] transition-colors duration-300 selection:bg-[#4BC7D1]/40 dark:selection:bg-[#8B7CFF]/40">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[60] focus:px-4 focus:py-2 focus:rounded-full focus:bg-[#4BC7D1] focus:text-[#0E100F] dark:focus:bg-[#FFFCE1] dark:focus:text-[#0E100F]">
         Skip to content
       </a>
 
       {/* scroll progress — like reference gradient bar */}
-      <div aria-hidden="true" className="fixed top-0 left-0 right-0 z-[55] h-[3px] origin-left bg-gradient-to-r from-[#8B7CFF] via-[#5EEAD4] to-[#FACC15]" style={{ transform: `scaleX(${progress})` }} />
+      <div aria-hidden="true" className="fixed top-0 left-0 right-0 z-[55] h-[3px] origin-left bg-gradient-to-r from-[#4BC7D1] via-[#4BC7D1] to-[#2FA8B4] dark:from-[#8B7CFF] dark:via-[#5EEAD4] dark:to-[#FACC15]" style={{ transform: `scaleX(${progress})` }} />
+
+      {/* ambient neon orbs — dark theme only, pure atmosphere */}
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 hidden dark:block">
+        <div className="absolute -top-32 -left-32 w-[480px] h-[480px] rounded-full bg-[#8B7CFF]/15 blur-[120px]" />
+        <div className="absolute top-1/3 -right-40 w-[520px] h-[520px] rounded-full bg-[#5EEAD4]/10 blur-[130px]" />
+        <div className="absolute bottom-0 left-1/3 w-[420px] h-[420px] rounded-full bg-[#8B7CFF]/10 blur-[120px]" />
+      </div>
 
       {/* NAVBAR — reference style */}
       <header className={`fixed top-0 inset-x-0 z-50 transition-all ${scrolled ? 'py-3' : 'py-5'}`}>
-        <nav aria-label="Primary" className={`mx-auto max-w-6xl px-4 flex items-center justify-between gap-4 transition-colors duration-300 ${scrolled ? 'bg-[#FFFCE1]/85 dark:bg-[#0E100F]/85 backdrop-blur-xl border border-[#0E100F]/10 dark:border-white/10 rounded-full px-6 py-3 shadow-xl' : 'bg-transparent border border-transparent'}`}>
+        <nav aria-label="Primary" className={`mx-auto max-w-6xl px-4 flex items-center justify-between gap-4 transition-colors duration-300 ${scrolled ? 'bg-[#F7F2EA]/85 dark:bg-[#0E100F]/85 backdrop-blur-xl border border-[#0E100F]/10 dark:border-white/10 rounded-full px-6 py-3 shadow-xl' : 'bg-transparent border border-transparent'}`}>
           <a href="#home" className="group font-display font-extrabold text-lg tracking-tight">
             {shortName}
-            <span className="text-[#8B7CFF] inline-block transition-transform duration-300 group-hover:scale-125">.</span>
+            <span className="text-[#4BC7D1] dark:text-[#8B7CFF] inline-block transition-transform duration-300 group-hover:scale-125">.</span>
           </a>
 
           <div className="hidden md:flex items-center gap-6 text-sm font-medium">
@@ -421,7 +461,7 @@ export default function App() {
             >
               {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
             </button>
-            <a href="#contact" className="px-5 py-2 rounded-full bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] text-sm font-bold hover:opacity-85 transition">Contact Me</a>
+            <a href="#contact" className="px-5 py-2 rounded-full bg-[#4BC7D1] text-[#0E100F] dark:bg-[#FFFCE1] dark:text-[#0E100F] text-sm font-bold hover:opacity-85 transition">Contact Me</a>
           </div>
 
           <div className="flex items-center gap-2 md:hidden">
@@ -440,16 +480,16 @@ export default function App() {
           </div>
         </nav>
         {menuOpen && (
-          <div id="mobile-menu" role="dialog" aria-modal="true" aria-label="Mobile navigation" className="md:hidden mx-4 mt-3 bg-[#FFFCE1] dark:bg-[#1A1C1A] border border-[#0E100F]/10 dark:border-white/10 rounded-2xl p-2 flex flex-col shadow-xl">
+          <div id="mobile-menu" role="dialog" aria-modal="true" aria-label="Mobile navigation" className="md:hidden mx-4 mt-3 bg-[#F7F2EA] dark:bg-[#1A1C1A] border border-[#0E100F]/10 dark:border-white/10 rounded-2xl p-2 flex flex-col shadow-xl">
             {NAV.map((n) => (
               <a key={n.id} href={`#${n.id}`} onClick={() => setMenuOpen(false)} className="px-4 py-3 text-sm hover:opacity-70 transition">{n.label}</a>
             ))}
-            <a href="#contact" onClick={() => setMenuOpen(false)} className="mt-2 text-center py-3 rounded-xl bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] font-bold">Contact Me</a>
+            <a href="#contact" onClick={() => setMenuOpen(false)} className="mt-2 text-center py-3 rounded-xl bg-[#4BC7D1] text-[#0E100F] dark:bg-[#FFFCE1] dark:text-[#0E100F] font-bold">Contact Me</a>
           </div>
         )}
       </header>
 
-      <main id="main-content">
+      <main id="main-content" className="relative z-[1]">
         {/* HERO — reference: Hello! + huge headline + image */}
         <section id="home" className="pt-32 pb-10 px-4 max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-12 gap-8 items-center">
@@ -459,7 +499,7 @@ export default function App() {
               </h1>
               <div className="flex flex-wrap gap-2 mt-4">
                 <span className="px-4 py-1.5 rounded-full border border-[#0E100F]/15 dark:border-white/15 text-sm font-semibold">{displayRole}</span>
-                <span className="px-4 py-1.5 rounded-full bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] text-sm font-semibold">AI Builder</span>
+                <span className="px-4 py-1.5 rounded-full bg-[#4BC7D1] text-[#0E100F] dark:bg-[#FFFCE1] dark:text-[#0E100F] text-sm font-semibold">AI Builder</span>
               </div>
 
               <h2 className="font-display font-extrabold text-4xl md:text-6xl leading-[1.02] tracking-tight mt-6 text-balance">
@@ -470,18 +510,18 @@ export default function App() {
               </p>
 
               <div className="flex flex-wrap gap-3 mt-8">
-                <a href="#projects" className="group px-7 py-3.5 rounded-full bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] font-bold text-sm inline-flex items-center gap-2 transition-all duration-300 hover:scale-[1.03] hover:shadow-xl active:scale-[0.98]">
+                <a href="#projects" className="group px-7 py-3.5 rounded-full bg-[#4BC7D1] text-[#0E100F] dark:bg-[#FFFCE1] dark:text-[#0E100F] font-bold text-sm inline-flex items-center gap-2 transition-all duration-300 hover:scale-[1.03] hover:shadow-xl active:scale-[0.98]">
                   View Projects <span aria-hidden="true" className="inline-block transition-transform duration-300 group-hover:translate-x-1">↗</span>
                 </a>
-                <a href="#contact" className="group px-7 py-3.5 rounded-full border border-[#0E100F]/20 dark:border-white/20 font-semibold text-sm transition-all duration-300 hover:scale-[1.03] hover:border-[#8B7CFF]/60 active:scale-[0.98]">
+                <a href="#contact" className="group px-7 py-3.5 rounded-full border border-[#0E100F]/20 dark:border-white/20 font-semibold text-sm transition-all duration-300 hover:scale-[1.03] hover:border-[#4BC7D1]/60 dark:hover:border-[#8B7CFF]/60 active:scale-[0.98]">
                   Say Hello ! <span aria-hidden="true" className="inline-block transition-transform duration-300 group-hover:translate-x-1">→</span>
                 </a>
                 {cvUrl ? (
-                  <a href={cvUrl} download className="group px-7 py-3.5 rounded-full border border-[#0E100F]/20 dark:border-white/20 font-semibold text-sm transition-all duration-300 hover:scale-[1.03] hover:border-[#8B7CFF]/60 active:scale-[0.98]">
+                  <a href={cvUrl} download className="group px-7 py-3.5 rounded-full border border-[#0E100F]/20 dark:border-white/20 font-semibold text-sm transition-all duration-300 hover:scale-[1.03] hover:border-[#4BC7D1]/60 dark:hover:border-[#8B7CFF]/60 active:scale-[0.98]">
                     Download CV <span aria-hidden="true" className="inline-block transition-transform duration-300 group-hover:translate-y-0.5">↓</span>
                   </a>
                 ) : (
-                  <button type="button" onClick={() => showToast('CV coming soon 📄')} className="group px-7 py-3.5 rounded-full border border-[#0E100F]/20 dark:border-white/20 font-semibold text-sm transition-all duration-300 hover:scale-[1.03] hover:border-[#8B7CFF]/60 active:scale-[0.98] opacity-70">
+                  <button type="button" onClick={() => showToast('CV coming soon 📄')} className="group px-7 py-3.5 rounded-full border border-[#0E100F]/20 dark:border-white/20 font-semibold text-sm transition-all duration-300 hover:scale-[1.03] hover:border-[#4BC7D1]/60 dark:hover:border-[#8B7CFF]/60 active:scale-[0.98] opacity-70">
                     Download CV <span aria-hidden="true" className="inline-block transition-transform duration-300 group-hover:translate-y-0.5">↓</span>
                   </button>
                 )}
@@ -489,8 +529,8 @@ export default function App() {
 
               <div className="flex items-center gap-6 mt-8 pt-6 border-t border-[#0E100F]/10 dark:border-white/10">
                 <div className="flex -space-x-2">
-                  <img src={AVATAR} alt={displayName} className="w-9 h-9 rounded-full border-2 border-[#FFFCE1] dark:border-[#0E100F] object-cover" />
-                  <span className="w-9 h-9 rounded-full bg-[#8B7CFF] border-2 border-[#FFFCE1] dark:border-[#0E100F] grid place-items-center text-xs font-bold text-white">111</span>
+                  <img src={AVATAR} alt={displayName} className="w-9 h-9 rounded-full border-2 border-[#F7F2EA] dark:border-[#0E100F] object-cover" />
+                  <span className="w-9 h-9 rounded-full bg-[#4BC7D1] dark:bg-[#8B7CFF] border-2 border-[#F7F2EA] dark:border-[#0E100F] grid place-items-center text-xs font-bold text-[#0E100F] dark:text-white">111</span>
                 </div>
                 <div className="text-sm">
                   <p className="font-medium">Growing on GitHub</p>
@@ -524,7 +564,7 @@ export default function App() {
                 <p className="text-xs tracking-[0.2em] font-bold opacity-60">TECH STACK</p>
                 <div className="flex flex-wrap gap-2 mt-3">
                   {['Python', 'Django', 'DRF', 'Docker', 'PostgreSQL', 'Redis'].map((t) => (
-                    <span key={t} className="px-3 py-1.5 rounded-full border border-[#0E100F]/15 dark:border-white/15 text-xs font-medium transition-all duration-300 hover:scale-105 hover:bg-[#0E100F] hover:text-[#FFFCE1] dark:hover:bg-[#FFFCE1] dark:hover:text-[#0E100F] cursor-default">{t}</span>
+                    <span key={t} className="px-3 py-1.5 rounded-full border border-[#0E100F]/15 dark:border-white/15 text-xs font-medium transition-all duration-300 hover:scale-105 hover:bg-[#4BC7D1] hover:text-[#0E100F] dark:hover:bg-[#FFFCE1] dark:hover:text-[#0E100F] cursor-default">{t}</span>
                   ))}
                 </div>
               </div>
@@ -537,8 +577,8 @@ export default function App() {
           <h2 className="reveal font-display font-extrabold text-3xl md:text-5xl tracking-tight">I can help you with.</h2>
           <div className="grid md:grid-cols-2 gap-x-10 gap-y-8 mt-8">
             {SERVICES.map((s, i) => (
-              <div key={s.n} style={{ transitionDelay: `${i * 100}ms` }} className="reveal group border-t border-[#0E100F]/15 dark:border-white/15 pt-5 transition-all duration-300 hover:translate-x-2 hover:border-[#8B7CFF]/60 will-change-transform">
-                <p className="font-display font-extrabold text-4xl opacity-20 transition-all duration-300 group-hover:opacity-60 group-hover:text-[#8B7CFF]">{s.n}</p>
+              <div key={s.n} style={{ transitionDelay: `${i * 100}ms` }} className="reveal group border-t border-[#0E100F]/15 dark:border-white/15 pt-5 transition-all duration-300 hover:translate-x-2 hover:border-[#4BC7D1]/60 dark:hover:border-[#8B7CFF]/60 will-change-transform">
+                <p className="font-display font-extrabold text-4xl opacity-20 transition-all duration-300 group-hover:opacity-60 group-hover:text-[#4BC7D1] dark:group-hover:text-[#8B7CFF]">{s.n}</p>
                 <h3 className="font-display font-bold text-2xl mt-2">{s.title}</h3>
                 <p className="opacity-70 text-sm leading-relaxed mt-3">{s.text}</p>
               </div>
@@ -564,7 +604,7 @@ export default function App() {
               const dateTitle = `Created ${created || 'unknown'}${pushed ? ` • Last push ${pushed}` : ''} — synced from GitHub`
               const cover = resolveMediaUrl(p.cover)
               return (
-              <article key={p.id ?? p.title} style={{ transitionDelay: `${(pi % 4) * 90}ms` }} className="reveal group grid lg:grid-cols-2 gap-6 items-stretch border border-[#0E100F]/10 dark:border-white/10 rounded-[28px] p-4 md:p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-[#8B7CFF]/10 hover:border-[#8B7CFF]/40 dark:hover:border-[#8B7CFF]/40">
+              <article key={p.id ?? p.title} style={{ transitionDelay: `${(pi % 4) * 90}ms` }} className="reveal group glass-3d grid lg:grid-cols-2 gap-6 items-stretch border border-[#0E100F]/10 dark:border-white/10 rounded-[28px] p-4 md:p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-[#4BC7D1]/10 dark:hover:shadow-[#8B7CFF]/10 hover:border-[#4BC7D1]/40 dark:hover:border-[#8B7CFF]/40">
                 <div className={`rounded-2xl bg-gradient-to-br ${p.gradient || 'from-violet-600 to-indigo-600'} relative p-6 flex flex-col justify-between overflow-hidden min-h-[280px]`}>
                   <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff22_1px,transparent_1px),linear-gradient(to_bottom,#ffffff22_1px,transparent_1px)] bg-[size:24px_24px] opacity-40 transition-opacity duration-300 group-hover:opacity-60" />
                   <div className="absolute -right-12 -bottom-12 w-48 h-48 bg-white/10 rounded-full blur-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
@@ -584,10 +624,10 @@ export default function App() {
                   <p className="font-semibold mt-2 opacity-80">{p.stack || (p.tags || []).join(', ')}</p>
                   <p className="text-sm opacity-70 leading-relaxed mt-3 flex-1">{p.description}</p>
                   <div className="flex flex-wrap gap-2 mt-4">
-                    {(p.tags || []).map((t) => <span key={t} className="px-2.5 py-1 rounded-full border border-[#0E100F]/15 dark:border-white/15 text-xs opacity-80 transition-all duration-300 hover:opacity-100 hover:border-[#8B7CFF]/60 hover:scale-105 cursor-default">{t}</span>)}
+                    {(p.tags || []).map((t) => <span key={t} className="px-2.5 py-1 rounded-full border border-[#0E100F]/15 dark:border-white/15 text-xs opacity-80 transition-all duration-300 hover:opacity-100 hover:border-[#4BC7D1]/60 dark:hover:border-[#8B7CFF]/60 hover:scale-105 cursor-default">{t}</span>)}
                   </div>
                   <div className="flex gap-3 mt-5">
-                    <a href={p.code_url || '#'} target="_blank" rel="noreferrer" onClick={(e) => { if (!p.code_url || p.code_url === '#') { e.preventDefault(); showToast('Github repo private 🔒') } }} className="group/btn flex-1 text-center px-6 py-2.5 rounded-full bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] text-sm font-bold transition-all duration-300 hover:shadow-xl hover:shadow-[#8B7CFF]/20 active:scale-[0.98]">View Code <span aria-hidden="true" className="inline-block transition-transform duration-300 group-hover/btn:translate-x-1">↗</span></a>
+                    <a href={p.code_url || '#'} target="_blank" rel="noreferrer" onClick={(e) => { if (!p.code_url || p.code_url === '#') { e.preventDefault(); showToast('Github repo private 🔒') } }} className="group/btn flex-1 text-center px-6 py-2.5 rounded-full bg-[#4BC7D1] text-[#0E100F] dark:bg-[#FFFCE1] dark:text-[#0E100F] text-sm font-bold transition-all duration-300 hover:shadow-xl hover:shadow-[#4BC7D1]/20 dark:hover:shadow-[#8B7CFF]/20 active:scale-[0.98]">View Code <span aria-hidden="true" className="inline-block transition-transform duration-300 group-hover/btn:translate-x-1">↗</span></a>
                   </div>
                 </div>
               </article>
@@ -606,7 +646,7 @@ export default function App() {
                 I&apos;m a computer engineering student who loves turning complex problems into clean, reliable services. I bridge ideas and infrastructure — designing schemas, shipping REST APIs and containerizing everything with Docker.
               </p>
               {githubProfile?.bio && (
-                <p className="text-sm leading-relaxed mt-3 border-l-2 border-[#8B7CFF]/60 pl-3 opacity-80">
+                <p className="text-sm leading-relaxed mt-3 border-l-2 border-[#4BC7D1]/60 dark:border-[#8B7CFF]/60 pl-3 opacity-80">
                   On GitHub: &ldquo;{githubProfile.bio}&rdquo;
                 </p>
               )}
@@ -625,7 +665,7 @@ export default function App() {
 
             <div className="md:col-span-7 border border-[#0E100F]/10 dark:border-white/10 rounded-[28px] p-8">
               <div className="flex flex-wrap gap-3">
-                <span className="px-4 py-2 rounded-full bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] text-sm font-bold">REST APIs</span>
+                <span className="px-4 py-2 rounded-full bg-[#4BC7D1] text-[#0E100F] dark:bg-[#FFFCE1] dark:text-[#0E100F] text-sm font-bold">REST APIs</span>
                 <span className="px-4 py-2 rounded-full border border-[#0E100F]/15 dark:border-white/15 text-sm">Dockerized Deploys</span>
                 <span className="px-4 py-2 rounded-full border border-[#0E100F]/15 dark:border-white/15 text-sm">RAG Systems</span>
               </div>
@@ -654,11 +694,11 @@ export default function App() {
           <h2 className="reveal font-display font-extrabold text-3xl md:text-5xl tracking-tight">My toolkit.</h2>
           <div className="grid md:grid-cols-2 gap-x-10 gap-y-8 mt-8">
             {TOOLKIT.map((g, gi) => (
-              <div key={g.group} style={{ transitionDelay: `${gi * 100}ms` }} className="reveal border-t border-[#0E100F]/15 dark:border-white/15 pt-5 transition-colors duration-300 hover:border-[#8B7CFF]/60">
+              <div key={g.group} style={{ transitionDelay: `${gi * 100}ms` }} className="reveal border-t border-[#0E100F]/15 dark:border-white/15 pt-5 transition-colors duration-300 hover:border-[#4BC7D1]/60 dark:hover:border-[#8B7CFF]/60">
                 <h3 className="font-display font-bold text-xl">{g.group}</h3>
                 <div className="flex flex-wrap gap-2 mt-4">
                   {g.items.map((t) => (
-                    <span key={t} className="px-3 py-1.5 rounded-full border border-[#0E100F]/15 dark:border-white/15 text-xs font-medium opacity-80 transition-all duration-300 hover:opacity-100 hover:scale-105 hover:bg-[#0E100F] hover:text-[#FFFCE1] dark:hover:bg-[#FFFCE1] dark:hover:text-[#0E100F] cursor-default">{t}</span>
+                    <span key={t} className="px-3 py-1.5 rounded-full border border-[#0E100F]/15 dark:border-white/15 text-xs font-medium opacity-80 transition-all duration-300 hover:opacity-100 hover:scale-105 hover:bg-[#4BC7D1] hover:text-[#0E100F] dark:hover:bg-[#FFFCE1] dark:hover:text-[#0E100F] cursor-default">{t}</span>
                   ))}
                 </div>
               </div>
@@ -667,14 +707,14 @@ export default function App() {
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-10">
             {skills.map((s, si) => (
-              <div key={s.id ?? s.name} style={{ transitionDelay: `${(si % 4) * 80}ms` }} className="reveal group border border-[#0E100F]/10 dark:border-white/10 rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-[#8B7CFF]/50">
-                <div className="w-10 h-10 rounded-xl bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] grid place-items-center font-bold text-sm transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6">
-                  {s.icon || '◆'}
+              <div key={s.id ?? s.name} style={{ transitionDelay: `${(si % 4) * 80}ms` }} className="reveal group glass-3d border border-[#0E100F]/10 dark:border-white/10 rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-[#4BC7D1]/50 dark:hover:border-[#8B7CFF]/50">
+                <div className="skill-icon w-11 h-11 text-xl font-bold transition-transform duration-300">
+                  <span aria-hidden="true">{s.icon || '◆'}</span>
                 </div>
                 <h3 className="font-semibold mt-4 text-sm">{s.name}</h3>
                 <p className="text-xs opacity-60 mt-1">{s.level}</p>
-                <div className="mt-3 h-1.5 bg-[#0E100F]/10 dark:bg-white/10 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-[#8B7CFF] via-[#5EEAD4] to-[#FACC15] rounded-full transition-all duration-500" style={{ width: levelWidth(s.level) }} />
+                <div className="skill-track mt-3 h-1.5 bg-[#0E100F]/10 dark:bg-white/10 rounded-full overflow-hidden">
+                  <div className="skill-bar h-full bg-gradient-to-r from-[#4BC7D1] via-[#4BC7D1] to-[#2FA8B4] dark:from-[#8B7CFF] dark:via-[#5EEAD4] dark:to-[#FACC15] rounded-full transition-all duration-500" style={{ width: levelWidth(s.level) }} />
                 </div>
               </div>
             ))}
@@ -684,7 +724,7 @@ export default function App() {
         {/* CONTACT */}
         <section id="contact" className="px-4 max-w-6xl mx-auto mt-20 mb-10">
           <div className="grid lg:grid-cols-12 gap-6">
-            <div className="lg:col-span-5 rounded-[28px] p-8 bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] relative overflow-hidden">
+            <div className="lg:col-span-5 rounded-[28px] p-8 bg-[#4BC7D1] text-[#0E100F] dark:bg-[#FFFCE1] dark:text-[#0E100F] relative overflow-hidden">
               <p className="text-xs tracking-[0.2em] font-bold opacity-60">GET IN TOUCH</p>
               <h2 className="font-display font-extrabold text-3xl md:text-4xl mt-3 leading-tight">Contact Me</h2>
               <p className="opacity-70 text-sm mt-3 leading-relaxed">Have an idea or want to collaborate? I&apos;m open to internships, freelance work and open-source projects. Drop a message and I&apos;ll reply within 24h.</p>
@@ -728,18 +768,18 @@ export default function App() {
               <div className="grid sm:grid-cols-2 gap-4">
                 <label className="space-y-1.5">
                   <span className="text-xs tracking-widest opacity-60 font-bold">FULL NAME</span>
-                  <input name="name" required maxLength={100} placeholder="John Doe" aria-invalid={!!formErrors.name} className={`w-full px-4 py-3 rounded-xl bg-transparent border text-sm placeholder:opacity-40 focus:outline-none transition focus:border-[#8B7CFF] focus:ring-2 focus:ring-[#8B7CFF]/30 ${formErrors.name ? 'border-red-500' : 'border-[#0E100F]/15 dark:border-white/15'}`} />
+                  <input name="name" required maxLength={100} placeholder="John Doe" aria-invalid={!!formErrors.name} className={`w-full px-4 py-3 rounded-xl bg-transparent border text-sm placeholder:opacity-40 focus:outline-none transition focus:border-[#4BC7D1] focus:ring-2 focus:ring-[#4BC7D1]/30 dark:focus:border-[#8B7CFF] dark:focus:ring-[#8B7CFF]/30 ${formErrors.name ? 'border-red-500' : 'border-[#0E100F]/15 dark:border-white/15'}`} />
                   {formErrors.name && <p className="text-xs text-red-500">{formErrors.name}</p>}
                 </label>
                 <label className="space-y-1.5">
                   <span className="text-xs tracking-widest opacity-60 font-bold">EMAIL ADDRESS</span>
-                  <input name="email" required type="email" maxLength={254} placeholder="john@example.com" aria-invalid={!!formErrors.email} className={`w-full px-4 py-3 rounded-xl bg-transparent border text-sm placeholder:opacity-40 focus:outline-none transition focus:border-[#8B7CFF] focus:ring-2 focus:ring-[#8B7CFF]/30 ${formErrors.email ? 'border-red-500' : 'border-[#0E100F]/15 dark:border-white/15'}`} />
+                  <input name="email" required type="email" maxLength={254} placeholder="john@example.com" aria-invalid={!!formErrors.email} className={`w-full px-4 py-3 rounded-xl bg-transparent border text-sm placeholder:opacity-40 focus:outline-none transition focus:border-[#4BC7D1] focus:ring-2 focus:ring-[#4BC7D1]/30 dark:focus:border-[#8B7CFF] dark:focus:ring-[#8B7CFF]/30 ${formErrors.email ? 'border-red-500' : 'border-[#0E100F]/15 dark:border-white/15'}`} />
                   {formErrors.email && <p className="text-xs text-red-500">{formErrors.email}</p>}
                 </label>
               </div>
               <label className="space-y-1.5 block mt-4">
                 <span className="text-xs tracking-widest opacity-60 font-bold">SUBJECT</span>
-                <input name="subject" placeholder="Project inquiry" maxLength={200} className={`w-full px-4 py-3 rounded-xl bg-transparent border text-sm placeholder:opacity-40 focus:outline-none transition focus:border-[#8B7CFF] focus:ring-2 focus:ring-[#8B7CFF]/30 ${formErrors.subject ? 'border-red-500' : 'border-[#0E100F]/15 dark:border-white/15'}`} />
+                <input name="subject" placeholder="Project inquiry" maxLength={200} className={`w-full px-4 py-3 rounded-xl bg-transparent border text-sm placeholder:opacity-40 focus:outline-none transition focus:border-[#4BC7D1] focus:ring-2 focus:ring-[#4BC7D1]/30 dark:focus:border-[#8B7CFF] dark:focus:ring-[#8B7CFF]/30 ${formErrors.subject ? 'border-red-500' : 'border-[#0E100F]/15 dark:border-white/15'}`} />
                 {formErrors.subject && <p className="text-xs text-red-500">{formErrors.subject}</p>}
               </label>
               <label className="space-y-1.5 block mt-4">
@@ -747,7 +787,7 @@ export default function App() {
                 <textarea name="message" required rows={4} maxLength={5000} placeholder="Tell me about your project..." className={`w-full px-4 py-3 rounded-xl bg-transparent border text-sm placeholder:opacity-40 focus:outline-none resize-none transition ${formErrors.message ? 'border-red-500' : 'border-[#0E100F]/15 dark:border-white/15'}`} />
                 {formErrors.message && <p className="text-xs text-red-500">{formErrors.message}</p>}
               </label>
-              <button type="submit" disabled={sending} className="group mt-6 w-full py-3.5 rounded-full bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] font-bold text-sm transition-all duration-300 hover:shadow-xl hover:shadow-[#8B7CFF]/20 active:scale-[0.99] inline-flex items-center justify-center gap-2 disabled:opacity-60">
+              <button type="submit" disabled={sending} className="group mt-6 w-full py-3.5 rounded-full bg-[#4BC7D1] text-[#0E100F] dark:bg-[#FFFCE1] dark:text-[#0E100F] font-bold text-sm transition-all duration-300 hover:shadow-xl hover:shadow-[#4BC7D1]/20 dark:hover:shadow-[#8B7CFF]/20 active:scale-[0.99] inline-flex items-center justify-center gap-2 disabled:opacity-60">
                 {sending ? 'Sending...' : 'Send Message'} <span aria-hidden="true" className="inline-block transition-transform duration-300 group-hover:translate-x-1">→</span>
               </button>
               <p className="text-center text-xs opacity-60 mt-3">Avg. response time — 3 hours ⚡ {apiStatus === 'online' ? '· Django API connected' : '· API offline — local fallback'}</p>
@@ -757,7 +797,7 @@ export default function App() {
       </main>
 
       {/* FOOTER — reference style */}
-      <footer className="border-t border-[#0E100F]/10 dark:border-white/10 px-4 pt-12 pb-6">
+      <footer className="relative z-[1] border-t border-[#0E100F]/10 dark:border-white/10 px-4 pt-12 pb-6">
         <div className="max-w-6xl mx-auto">
           <h2 className="font-display font-extrabold text-3xl md:text-5xl tracking-tight leading-tight">Where aesthetics &amp;<br />functionality meet</h2>
           <div className="grid md:grid-cols-3 gap-8 mt-10">
@@ -780,8 +820,8 @@ export default function App() {
               </div>
             </div>
             <div className="flex flex-col gap-3">
-              <a href="#contact" className="px-6 py-3 rounded-full bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] text-sm font-bold text-center transition-all duration-300 hover:scale-[1.02] hover:shadow-xl active:scale-[0.98]">Contact Me</a>
-              <a href="#projects" className="px-6 py-3 rounded-full border border-[#0E100F]/20 dark:border-white/20 text-sm font-semibold text-center transition-all duration-300 hover:scale-[1.02] hover:border-[#8B7CFF]/60 active:scale-[0.98]">Say Hello ! — Explore Projects</a>
+              <a href="#contact" className="px-6 py-3 rounded-full bg-[#4BC7D1] text-[#0E100F] dark:bg-[#FFFCE1] dark:text-[#0E100F] text-sm font-bold text-center transition-all duration-300 hover:scale-[1.02] hover:shadow-xl active:scale-[0.98]">Contact Me</a>
+              <a href="#projects" className="px-6 py-3 rounded-full border border-[#0E100F]/20 dark:border-white/20 text-sm font-semibold text-center transition-all duration-300 hover:scale-[1.02] hover:border-[#4BC7D1]/60 dark:hover:border-[#8B7CFF]/60 active:scale-[0.98]">Say Hello ! — Explore Projects</a>
             </div>
           </div>
           <div className="flex flex-col md:flex-row items-center justify-between gap-3 mt-10 pt-6 border-t border-[#0E100F]/10 dark:border-white/10 text-sm opacity-70">
@@ -792,7 +832,7 @@ export default function App() {
       </footer>
 
       {toast && (
-        <div role="status" aria-live="polite" aria-atomic="true" className="toast-in fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#0E100F] text-[#FFFCE1] dark:bg-[#FFFCE1] dark:text-[#0E100F] text-sm px-5 py-3 rounded-full shadow-2xl z-50">
+        <div role="status" aria-live="polite" aria-atomic="true" className="toast-in fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#4BC7D1] text-[#0E100F] dark:bg-[#FFFCE1] dark:text-[#0E100F] text-sm px-5 py-3 rounded-full shadow-2xl z-50">
           {toast}
         </div>
       )}

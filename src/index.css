@@ -17,13 +17,14 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 html.light body {
-  background: #FFFCE1;
+  background: #F7F2EA;
   color: #0E100F;
 }
 ::selection { background: #8B7CFF; color: #FFFCE1; }
+html.light ::selection { background: #4BC7D1; color: #0E100F; }
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: #0E100F; }
-html.light ::-webkit-scrollbar-track { background: #EFEAD2; }
+html.light ::-webkit-scrollbar-track { background: #E9DFCB; }
 ::-webkit-scrollbar-thumb { background: #3a3d39; border-radius: 999px; }
 
 .font-display { font-family: 'Hanken Grotesk', sans-serif; letter-spacing: -0.03em; }
@@ -48,6 +49,9 @@ section[id] { scroll-margin-top: 88px; }
   transition: right 0.3s ease;
 }
 .nav-link:hover::after { right: 0; }
+html.light .nav-link::after {
+  background: linear-gradient(to right, #4BC7D1, #4BC7D1);
+}
 
 /* scroll-reveal entrance (buttery ease-out; classes are removed after entrance
    so they never fight hover transforms) */
@@ -65,4 +69,156 @@ section[id] { scroll-margin-top: 88px; }
   * { scroll-behavior: auto; }
   .reveal { opacity: 1; transform: none; transition: none; }
   .toast-in { animation: none; }
+}
+
+/* ---- liquid-glass skill icons + subtle 3D cards (light-first) ---- */
+.skill-icon {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transform: translateZ(0);
+}
+.skill-icon::before {
+  /* top gloss streak */
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0) 48%);
+  pointer-events: none;
+}
+.skill-icon::after {
+  /* bottom inner depth */
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: radial-gradient(120% 90% at 50% 115%, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0) 55%);
+  pointer-events: none;
+}
+.skill-icon > span {
+  position: relative;
+  z-index: 1;
+  line-height: 1;
+  filter: drop-shadow(0 2px 2px rgba(14, 16, 15, 0.25));
+}
+html.light .skill-icon {
+  background: linear-gradient(180deg, #FFFFFF 0%, #EFFBFC 100%);
+  border: 1px solid rgba(47, 168, 180, 0.45);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 1),
+    inset 0 -2px 4px rgba(47, 168, 180, 0.12),
+    0 6px 14px -8px rgba(47, 168, 180, 0.5),
+    0 2px 4px rgba(14, 16, 15, 0.08);
+  color: #0E100F;
+  text-shadow: none;
+}
+.group:hover .skill-icon {
+  transform: scale(1.1) rotate(-6deg) translateZ(0);
+}
+
+/* subtle 3D glass cards in light theme */
+html.light .glass-3d {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.35));
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 2px rgba(14, 16, 15, 0.05),
+    0 16px 32px -20px rgba(47, 168, 180, 0.35),
+    0 8px 16px -12px rgba(14, 16, 15, 0.12);
+}
+html.light .glass-3d:hover {
+  border-color: rgba(75, 199, 209, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    0 2px 4px rgba(14, 16, 15, 0.06),
+    0 24px 44px -20px rgba(47, 168, 180, 0.5),
+    0 12px 24px -14px rgba(14, 16, 15, 0.16);
+}
+/* ---- midnight neon depth (dark theme 3D) ---- */
+html.dark body {
+  background:
+    radial-gradient(900px 480px at 12% -4%, rgba(139, 124, 255, 0.14), rgba(139, 124, 255, 0) 60%),
+    radial-gradient(800px 420px at 88% 8%, rgba(94, 234, 212, 0.08), rgba(94, 234, 212, 0) 60%),
+    #0E100F;
+}
+html.dark .glass-3d {
+  position: relative;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4),
+    0 20px 44px -22px rgba(0, 0, 0, 0.85),
+    0 0 0 1px rgba(0, 0, 0, 0.2);
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+html.dark .glass-3d::before {
+  /* cursor spotlight that follows the mouse (set via --mx/--my) */
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  z-index: 0;
+  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgba(139, 124, 255, 0.18), rgba(94, 234, 212, 0.06) 42%, rgba(0, 0, 0, 0) 68%);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+}
+html.dark .glass-3d:hover::before { opacity: 1; }
+html.dark .glass-3d:hover {
+  border-color: rgba(139, 124, 255, 0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 26px 56px -20px rgba(0, 0, 0, 0.9),
+    0 0 28px -6px rgba(139, 124, 255, 0.4),
+    0 0 44px -12px rgba(94, 234, 212, 0.22);
+}
+html.dark .glass-3d > * { position: relative; z-index: 1; }
+/* neon glass icons in dark */
+html.dark .skill-icon {
+  background: linear-gradient(135deg, #2A2D33 0%, #16181B 55%, #0E100F 100%);
+  border: 1px solid rgba(139, 124, 255, 0.45);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.18),
+    inset 0 -3px 8px rgba(0, 0, 0, 0.55),
+    0 0 14px -2px rgba(139, 124, 255, 0.55),
+    0 0 30px -6px rgba(94, 234, 212, 0.28),
+    0 10px 20px -10px rgba(0, 0, 0, 0.9);
+  color: #FFFCE1;
+  text-shadow: 0 0 12px rgba(139, 124, 255, 0.65);
+}
+html.dark .skill-icon > span {
+  filter: drop-shadow(0 0 6px rgba(139, 124, 255, 0.7)) drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6));
+}
+/* neon progress in dark */
+html.dark .skill-track {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+html.dark .skill-bar {
+  box-shadow: 0 0 12px rgba(139, 124, 255, 0.65), 0 0 22px rgba(94, 234, 212, 0.3);
+}
+/* JS-driven tilt: smooth, disabled for reduced motion */
+.tilt { transition: transform 0.18s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .tilt { transition: none; }
+  html.dark .glass-3d::before { display: none; }
+}
+/* glossy progress track/bar in light */
+html.light .skill-track {
+  background: rgba(14, 16, 15, 0.1);
+  box-shadow: inset 0 1px 2px rgba(14, 16, 15, 0.12);
+}
+html.light .skill-bar {
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.7), 0 2px 6px -2px rgba(47, 168, 180, 0.7);
 }
